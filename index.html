@@ -3,15 +3,15 @@
 <head>
   <base target="_top">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <meta name="theme-color" content="#000000">
+  <meta name="theme-color" content="#F47B20">
   <link rel="manifest" href="manifest.json">
 
   <style>
     body {
-      font-family: Collage, sans-serif;
+      font-family: 'Segoe UI', Roboto, sans-serif;
       margin: 0;
       padding: 0;
-      background-color: #000;
+      background-color: #0B1E3F;
       color: #fff;
       text-align: center;
     }
@@ -20,35 +20,46 @@
     .login-box input {
       display: block;
       margin: 10px auto;
-      padding: 8px;
-      width: 200px;
-      border-radius: 6px;
-      border: none;
+      padding: 10px;
+      width: 220px;
+      border-radius: 8px;
+      border: 1px solid #223B6C;
+      background: #102752;
+      color: #fff;
     }
+    .login-box input::placeholder { color: #bbb; }
     button {
-      padding: 8px 16px;
+      padding: 10px 18px;
       border: none;
-      background: red;
+      background: #F47B20;
       color: white;
-      border-radius: 6px;
+      border-radius: 8px;
       cursor: pointer;
+      font-weight: 600;
+    }
+    button:hover:not([disabled]) {
+      background: #ff973f;
     }
     button[disabled] {
-      background: gray !important;
+      background: #555 !important;
       cursor: default;
     }
     .card {
-      border: 1px solid #555;
+      border: 1px solid #244577;
       border-radius: 10px;
-      padding: 10px;
+      padding: 12px;
       margin: 10px;
-      background: #111;
+      background: #122b59;
+    }
+    h1 {
+      color: #F47B20;
+      margin-bottom: 20px;
     }
   </style>
 
   <script>
     // 🔁 Auto-aktualizacja
-    const WERSJA_APKI = '1.0.12';
+    const WERSJA_APKI = '1.0.0-DEMO';
     const poprzednia = localStorage.getItem('wersjaApki');
     if (poprzednia !== WERSJA_APKI) {
       localStorage.setItem('wersjaApki', WERSJA_APKI);
@@ -67,17 +78,18 @@
 <body>
 
   <!-- 🧠 Splash screen -->
-  <div id="splash" style="display:flex;justify-content:center;align-items:center;height:100vh;background:#000;">
-    <img src="icon-512.png" style="width:300px;" alt="Logo Warriors">
+  <div id="splash" style="display:flex;justify-content:center;align-items:center;height:100vh;background:#0B1E3F;">
+    <img src="icon-512.png" style="width:200px;" alt="Logo OrgHub">
   </div>
 
   <!-- 🔐 Ekran logowania -->
   <div id="app" class="hidden">
     <div id="loginView" class="container">
-      <img src="https://i.imgur.com/41PSyW5.jpeg" class="logo" style="width:200px;margin-bottom:20px;">
-      <h1>Logowanie</h1>
+      <img src="icon-192.png" class="logo" style="width:140px;margin-bottom:15px;">
+      <h1>OrgHub Systems</h1>
+      <p style="color:#ccc;">Panel demonstracyjny logowania</p>
       <div class="login-box">
-        <input id="numer" type="number" placeholder="Numer zawodnika">
+        <input id="numer" type="number" placeholder="Numer użytkownika">
         <input id="haslo" type="password" placeholder="Hasło">
         <button onclick="zaloguj()">Zaloguj</button>
       </div>
@@ -86,37 +98,38 @@
 
     <!-- 💳 Płatności -->
     <div id="platnosciView" class="container hidden">
-      <h1>Płatności</h1>
+      <h1>Składki i opłaty</h1>
       <div id="listaPlatnosci">Ładowanie...</div>
     </div>
 
-    <!-- 🏒 Treningi -->
+    <!-- 📅 Wydarzenia -->
     <div id="homeView" class="container hidden">
-      <h1 id="tytulTreningow">Treningi</h1>
+      <h1 id="tytulTreningow">Wydarzenia</h1>
       <div id="listaTreningow">Ładowanie...</div>
-      <button onclick="pokazStatystyki()" style="margin-top:20px;">📈 Pokaż moje statystyki</button>
+      <button onclick="pokazStatystyki()" style="margin-top:20px;">📊 Pokaż statystyki</button>
     </div>
 
     <!-- 📈 Statystyki -->
     <div id="statsView" class="container hidden">
-      <h1>Moje statystyki</h1>
+      <h1>Twoje statystyki</h1>
       <div id="listaStatystyk">Ładowanie...</div>
       <button onclick="powrotDoTreningow()" style="margin-top:20px;">⬅ Powrót</button>
     </div>
   </div>
 
   <script>
-    // ⏳ Ukrywanie splash screena po 2 sekundach
+    // ⏳ Ukrywanie splash screena po 1.5 sek
     window.addEventListener('load', () => {
       setTimeout(() => {
         document.getElementById('splash').style.display = 'none';
         document.getElementById('app').classList.remove('hidden');
-      }, 2000);
+      }, 1500);
     });
 
     let numerZalogowanego = null;
     let grupaZalogowanego = null;
 
+    // 🔗 Endpoint demo
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbymaWoF7ReHt26DE07GOmfc0tE126czCBiRHlFlavIyuh5VKydmn7eFHiuu68DDWVm8/exec";
 
     // 🔐 Logowanie
@@ -126,7 +139,7 @@
       const komunikat = document.getElementById("komunikat");
 
       if (!numer || !haslo) {
-        komunikat.innerText = "Podaj numer zawodnika i hasło.";
+        komunikat.innerText = "Podaj numer użytkownika i hasło.";
         return;
       }
 
@@ -138,7 +151,7 @@
         if (response.success) {
           numerZalogowanego = numer;
           grupaZalogowanego = response.group;
-          komunikat.innerText = "✅ Zalogowano";
+          komunikat.innerText = "✅ Zalogowano pomyślnie";
           document.getElementById("loginView").classList.add("hidden");
           document.getElementById("platnosciView").classList.remove("hidden");
           const platnosci = await (await fetch(`${SCRIPT_URL}?action=platnosci&numer=${numer}`)).json();
@@ -158,7 +171,7 @@
         div.innerHTML = "<p>Brak zaległości ✅</p><button onclick='pokazTreningi()'>Dalej ➡</button>";
         return;
       }
-      div.innerHTML = `<h3>Zaległe płatności:</h3>` +
+      div.innerHTML = `<h3>Zaległe składki:</h3>` +
         lista.map(p => `<div class='card' style='background:#a00;'>🔴 ${p.nazwa} – ${p.kwota} zł</div>`).join('') +
         `<button onclick='pokazTreningi()' style='margin-top:20px;'>Dalej ➡</button>`;
     }
@@ -170,78 +183,66 @@
       renderTreningi(lista);
     }
 
-  function renderTreningi(lista) {
-    const div = document.getElementById('listaTreningow');
-    if (!lista || !lista.length) {
-      div.innerHTML = "<p>Brak dostępnych treningów</p>";
-      return;
-    }
+    function renderTreningi(lista) {
+      const div = document.getElementById('listaTreningow');
+      if (!lista || !lista.length) {
+        div.innerHTML = "<p>Brak dostępnych wydarzeń</p>";
+        return;
+      }
 
-    div.innerHTML = lista.map(t => `
-      <div class="card">
-        <p>
-          <b>${t.data}</b> (${t.dzien}) – ${t.czas} <br>
-          Trener: <b>${t.trener}</b><br>
-          Zapisanych: ${t.zapisanych}
-        </p>
-        <div style="display:flex; justify-content:center; gap:10px;">
-          <button id="btn-${t.id}"
-            ${t.zapisany ? 'disabled' : ''}
-            onclick="zapiszSie('${t.id}')">
-            ${t.zapisany ? 'Zapisano ✅' : 'Zapisz się'}
-          </button>
-          <button id="wypisz-${t.id}"
-            ${t.zapisany ? '' : 'disabled'}
-            style="background:#444;"
-            onclick="wypiszSie('${t.id}')">
-            Wypisz się
-          </button>
+      div.innerHTML = lista.map(t => `
+        <div class="card">
+          <p>
+            <b>${t.data}</b> (${t.dzien}) – ${t.czas} <br>
+            Prowadzący: <b>${t.trener}</b><br>
+            Zapisanych: ${t.zapisanych}
+          </p>
+          <div style="display:flex; justify-content:center; gap:10px;">
+            <button id="btn-${t.id}" ${t.zapisany ? 'disabled' : ''} onclick="zapiszSie('${t.id}')">
+              ${t.zapisany ? 'Zapisano ✅' : 'Zapisz się'}
+            </button>
+            <button id="wypisz-${t.id}" ${t.zapisany ? '' : 'disabled'} style="background:#2a3f66;" onclick="wypiszSie('${t.id}')">
+              Wypisz się
+            </button>
+          </div>
         </div>
-      </div>
-    `).join('');
-  }
-
-  // 📥 zapis na trening
-  async function zapiszSie(id) {
-    try {
-      const res = await fetch(`${SCRIPT_URL}?action=zapisz&numer=${numerZalogowanego}&treningId=${encodeURIComponent(id)}`);
-      const resp = await res.json();
-      if (resp.ok) {
-        const btn = document.getElementById(`btn-${id}`);
-        const wypisz = document.getElementById(`wypisz-${id}`);
-        btn.innerText = "Zapisano ✅";
-        btn.disabled = true;
-        wypisz.disabled = false;
-      } else {
-        alert(resp.message);
-      }
-    } catch (e) {
-      alert("Błąd połączenia przy zapisie");
-      console.error(e);
+      `).join('');
     }
-  }
 
-  // 🧽 wypisz się
-  async function wypiszSie(id) {
-    try {
-      const res = await fetch(`${SCRIPT_URL}?action=wypisz&numer=${numerZalogowanego}&treningId=${encodeURIComponent(id)}`);
-      const resp = await res.json();
-      if (resp.ok) {
-        const btn = document.getElementById(`btn-${id}`);
-        const wypisz = document.getElementById(`wypisz-${id}`);
-        btn.innerText = "Zapisz się";
-        btn.disabled = false;
-        wypisz.disabled = true;
-      } else {
-        alert(resp.message);
+    async function zapiszSie(id) {
+      try {
+        const res = await fetch(`${SCRIPT_URL}?action=zapisz&numer=${numerZalogowanego}&treningId=${encodeURIComponent(id)}`);
+        const resp = await res.json();
+        if (resp.ok) {
+          const btn = document.getElementById(`btn-${id}`);
+          const wypisz = document.getElementById(`wypisz-${id}`);
+          btn.innerText = "Zapisano ✅";
+          btn.disabled = true;
+          wypisz.disabled = false;
+        } else alert(resp.message);
+      } catch (e) {
+        alert("Błąd połączenia przy zapisie");
+        console.error(e);
       }
-    } catch (e) {
-      alert("Błąd połączenia przy wypisie");
-      console.error(e);
     }
-  }
 
-    // 📈 Statystyki
+    async function wypiszSie(id) {
+      try {
+        const res = await fetch(`${SCRIPT_URL}?action=wypisz&numer=${numerZalogowanego}&treningId=${encodeURIComponent(id)}`);
+        const resp = await res.json();
+        if (resp.ok) {
+          const btn = document.getElementById(`btn-${id}`);
+          const wypisz = document.getElementById(`wypisz-${id}`);
+          btn.innerText = "Zapisz się";
+          btn.disabled = false;
+          wypisz.disabled = true;
+        } else alert(resp.message);
+      } catch (e) {
+        alert("Błąd połączenia przy wypisie");
+        console.error(e);
+      }
+    }
+
     async function pokazStatystyki() {
       document.getElementById("homeView").classList.add("hidden");
       document.getElementById("statsView").classList.remove("hidden");
@@ -249,7 +250,7 @@
         const res = await fetch(`${SCRIPT_URL}?action=statystyki&numer=${numerZalogowanego}`);
         const lista = await res.json();
         renderStatystyki(lista);
-      } catch (err) {
+      } catch {
         document.getElementById("listaStatystyk").innerHTML = "<p>⚠️ Błąd połączenia</p>";
       }
     }
@@ -261,9 +262,7 @@
         return;
       }
       div.innerHTML = lista.map(s => `
-        <div class="card">
-          📅 ${s.miesiac} — 🏒 ${s.treningi} treningów
-        </div>
+        <div class="card">📅 ${s.miesiac} — ${s.treningi} wydarzeń</div>
       `).join('');
     }
 
