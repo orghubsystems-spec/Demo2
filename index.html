@@ -50,13 +50,15 @@
       padding: 12px;
       margin: 10px;
       background: #122b59;
+      transition: background 0.2s ease;
     }
+    .card:hover { background: #15346a; }
     h1 {
       color: #F47B20;
       margin-bottom: 20px;
     }
 
-    /* 🔹 Wersja apki w prawym górnym rogu */
+    /* 🔹 Wersja apki */
     #wersjaApki {
       position: fixed;
       top: 8px;
@@ -68,11 +70,22 @@
       z-index: 1000;
       letter-spacing: 0.5px;
     }
+
+    /* Lista zapisanych */
+    .lista-zapisanych {
+      background: rgba(255,255,255,0.05);
+      border-radius: 6px;
+      padding: 8px;
+      margin-top: 6px;
+      text-align: left;
+      font-size: 0.9rem;
+      line-height: 1.4;
+    }
   </style>
 
   <script>
     // 🔁 Auto-aktualizacja
-    const WERSJA_APKI = '1.0.6-DEMO';
+    const WERSJA_APKI = '1.0.7-DEMO';
     const poprzednia = localStorage.getItem('wersjaApki');
     if (poprzednia !== WERSJA_APKI) {
       localStorage.setItem('wersjaApki', WERSJA_APKI);
@@ -89,15 +102,15 @@
 </head>
 
 <body>
-  <!-- 🔹 Wyświetlana wersja apki -->
+  <!-- 🔹 Wersja -->
   <div id="wersjaApki">v<span id="wersjaNum"></span></div>
 
-  <!-- 🧠 Splash screen -->
+  <!-- 🧠 Splash -->
   <div id="splash" style="display:flex;justify-content:center;align-items:center;height:100vh;background:#0B1E3F;">
     <img src="icon-512.png" style="width:200px;" alt="Logo OrgHub">
   </div>
 
-  <!-- 🔐 Ekran logowania -->
+  <!-- 🔐 App -->
   <div id="app" class="hidden">
     <div id="loginView" class="container">
       <img src="icon-192.png" class="logo" style="width:140px;margin-bottom:15px;">
@@ -117,7 +130,7 @@
       <div id="listaPlatnosci">Ładowanie...</div>
     </div>
 
-    <!-- 📅 Wydarzenia -->
+    <!-- 📅 Treningi -->
     <div id="homeView" class="container hidden">
       <h1 id="tytulTreningow">Wydarzenia</h1>
       <div id="listaTreningow">Ładowanie...</div>
@@ -133,12 +146,11 @@
   </div>
 
   <script>
-    // ⏳ Ukrywanie splash screena po 1.5 sek
+    // Splash
     window.addEventListener('load', () => {
       setTimeout(() => {
         document.getElementById('splash').style.display = 'none';
         document.getElementById('app').classList.remove('hidden');
-        // 💡 Wstawienie wersji apki po załadowaniu
         const wersjaEl = document.getElementById("wersjaNum");
         if (wersjaEl) wersjaEl.textContent = WERSJA_APKI;
       }, 1500);
@@ -147,7 +159,7 @@
     let numerZalogowanego = null;
     let grupaZalogowanego = null;
 
-    // 🔗 Endpoint demo
+    // 🔗 Endpoint
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxdQbKgmi2GOQWVGWO4ZgeAc5ONJ7BzA3-8Dz4XRqerydmd4RsH-rO-OzikPaDwsixqiA/exec";
 
     // 🔐 Logowanie
@@ -155,14 +167,9 @@
       const numer = document.getElementById("numer").value.trim();
       const haslo = document.getElementById("haslo").value.trim();
       const komunikat = document.getElementById("komunikat");
-
-      if (!numer || !haslo) {
-        komunikat.innerText = "Podaj numer użytkownika i hasło.";
-        return;
-      }
+      if (!numer || !haslo) { komunikat.innerText = "Podaj numer użytkownika i hasło."; return; }
 
       komunikat.innerText = "Trwa logowanie...";
-
       try {
         const res = await fetch(`${SCRIPT_URL}?action=login&numer=${numer}&haslo=${haslo}`);
         const response = await res.json();
@@ -174,20 +181,16 @@
           document.getElementById("platnosciView").classList.remove("hidden");
           const platnosci = await (await fetch(`${SCRIPT_URL}?action=platnosci&numer=${numer}`)).json();
           renderPlatnosci(platnosci);
-        } else {
-          komunikat.innerText = "❌ " + response.message;
-        }
+        } else komunikat.innerText = "❌ " + response.message;
       } catch (err) {
-        komunikat.innerText = "⚠️ Błąd połączenia";
-        console.error(err);
+        komunikat.innerText = "⚠️ Błąd połączenia"; console.error(err);
       }
     }
 
     function renderPlatnosci(lista) {
       const div = document.getElementById("listaPlatnosci");
       if (!lista || !lista.length) {
-        div.innerHTML = "<p>Brak zaległości ✅</p><button onclick='pokazTreningi()'>Dalej ➡</button>";
-        return;
+        div.innerHTML = "<p>Brak zaległości ✅</p><button onclick='pokazTreningi()'>Dalej ➡</button>"; return;
       }
       div.innerHTML = `<h3>Zaległe składki:</h3>` +
         lista.map(p => `<div class='card' style='background:#a00;'>🔴 ${p.nazwa} – ${p.kwota} zł</div>`).join('') +
@@ -203,28 +206,41 @@
 
     function renderTreningi(lista) {
       const div = document.getElementById('listaTreningow');
-      if (!lista || !lista.length) {
-        div.innerHTML = "<p>Brak dostępnych wydarzeń</p>";
-        return;
-      }
+      if (!lista || !lista.length) { div.innerHTML = "<p>Brak dostępnych wydarzeń</p>"; return; }
 
       div.innerHTML = lista.map(t => `
-        <div class="card">
+        <div class="card" onclick="pokazZapisanych('${t.id}')" style="cursor:pointer;">
           <p>
-            <b>${t.data}</b> (${t.dzien}) – ${t.czas} <br>
+            <b>${t.data}</b> (${t.dzien}) – ${t.czas}<br>
             Prowadzący: <b>${t.trener}</b><br>
+            Grupy: ${t.grupyTreningu}<br>
             Zapisanych: ${t.zapisanych}
           </p>
-          <div style="display:flex; justify-content:center; gap:10px;">
-            <button id="btn-${t.id}" ${t.zapisany ? 'disabled' : ''} onclick="zapiszSie('${t.id}')">
+          <div id="lista-${t.id}" class="lista-zapisanych hidden"></div>
+          <div style="display:flex; justify-content:center; gap:10px; margin-top:8px;">
+            <button id="btn-${t.id}" ${t.zapisany ? 'disabled' : ''} onclick="event.stopPropagation(); zapiszSie('${t.id}')">
               ${t.zapisany ? 'Zapisano ✅' : 'Zapisz się'}
             </button>
-            <button id="wypisz-${t.id}" ${t.zapisany ? '' : 'disabled'} style="background:#2a3f66;" onclick="wypiszSie('${t.id}')">
+            <button id="wypisz-${t.id}" ${t.zapisany ? '' : 'disabled'} style="background:#2a3f66;" onclick="event.stopPropagation(); wypiszSie('${t.id}')">
               Wypisz się
             </button>
           </div>
         </div>
       `).join('');
+    }
+
+    async function pokazZapisanych(id) {
+      const el = document.getElementById(`lista-${id}`);
+      if (!el.classList.contains("hidden")) { el.classList.add("hidden"); el.innerHTML = ""; return; }
+      el.classList.remove("hidden"); el.innerHTML = "<p style='color:#bbb;'>Ładowanie listy...</p>";
+      try {
+        const res = await fetch(`${SCRIPT_URL}?action=zapisani&treningId=${encodeURIComponent(id)}`);
+        const lista = await res.json();
+        if (!lista || !lista.length) { el.innerHTML = "<p style='color:#bbb;'>Brak zapisanych</p>"; return; }
+        el.innerHTML = lista.map((os, i) => `<div>${i + 1}. ${os.nazwisko}</div>`).join('');
+      } catch (e) {
+        el.innerHTML = "<p style='color:#f55;'>Błąd pobierania listy</p>"; console.error(e);
+      }
     }
 
     async function zapiszSie(id) {
@@ -234,14 +250,9 @@
         if (resp.ok) {
           const btn = document.getElementById(`btn-${id}`);
           const wypisz = document.getElementById(`wypisz-${id}`);
-          btn.innerText = "Zapisano ✅";
-          btn.disabled = true;
-          wypisz.disabled = false;
+          btn.innerText = "Zapisano ✅"; btn.disabled = true; wypisz.disabled = false;
         } else alert(resp.message);
-      } catch (e) {
-        alert("Błąd połączenia przy zapisie");
-        console.error(e);
-      }
+      } catch (e) { alert("Błąd połączenia przy zapisie"); console.error(e); }
     }
 
     async function wypiszSie(id) {
@@ -251,14 +262,9 @@
         if (resp.ok) {
           const btn = document.getElementById(`btn-${id}`);
           const wypisz = document.getElementById(`wypisz-${id}`);
-          btn.innerText = "Zapisz się";
-          btn.disabled = false;
-          wypisz.disabled = true;
+          btn.innerText = "Zapisz się"; btn.disabled = false; wypisz.disabled = true;
         } else alert(resp.message);
-      } catch (e) {
-        alert("Błąd połączenia przy wypisie");
-        console.error(e);
-      }
+      } catch (e) { alert("Błąd połączenia przy wypisie"); console.error(e); }
     }
 
     async function pokazStatystyki() {
@@ -275,13 +281,8 @@
 
     function renderStatystyki(lista) {
       const div = document.getElementById("listaStatystyk");
-      if (!lista || !lista.length) {
-        div.innerHTML = "<p>Brak danych statystyk</p>";
-        return;
-      }
-      div.innerHTML = lista.map(s => `
-        <div class="card">📅 ${s.miesiac} — ${s.treningi} wydarzeń</div>
-      `).join('');
+      if (!lista || !lista.length) { div.innerHTML = "<p>Brak danych statystyk</p>"; return; }
+      div.innerHTML = lista.map(s => `<div class="card">📅 ${s.miesiac} — ${s.treningi} wydarzeń</div>`).join('');
     }
 
     function powrotDoTreningow() {
