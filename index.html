@@ -85,7 +85,7 @@
 
   <script>
     // 🔁 Auto-aktualizacja
-    const WERSJA_APKI = '1.0.8-DEMO';
+    const WERSJA_APKI = '1.0.9-DEMO';
     const poprzednia = localStorage.getItem('wersjaApki');
     if (poprzednia !== WERSJA_APKI) {
       localStorage.setItem('wersjaApki', WERSJA_APKI);
@@ -160,7 +160,7 @@
     let grupaZalogowanego = null;
 
     // 🔗 Endpoint
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxdQbKgmi2GOQWVGWO4ZgeAc5ONJ7BzA3-8Dz4XRqerydmd4RsH-rO-OzikPaDwsixqiA/exec";
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxRZZe7BYzyyqXLuEn9if5smAFYl40Jem7boDG45M7i90grfI2D1TcKSUTkDUxH5weMTQ/exec";
 
     // 🔐 Logowanie
     async function zaloguj() {
