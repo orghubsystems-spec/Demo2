@@ -55,6 +55,19 @@
       color: #F47B20;
       margin-bottom: 20px;
     }
+
+    /* 🔹 Wersja apki w prawym górnym rogu */
+    #wersjaApki {
+      position: fixed;
+      top: 8px;
+      right: 12px;
+      font-size: 0.85rem;
+      color: rgba(255, 255, 255, 0.6);
+      font-family: Arial, sans-serif;
+      user-select: none;
+      z-index: 1000;
+      letter-spacing: 0.5px;
+    }
   </style>
 
   <script>
@@ -76,6 +89,8 @@
 </head>
 
 <body>
+  <!-- 🔹 Wyświetlana wersja apki -->
+  <div id="wersjaApki">v<span id="wersjaNum"></span></div>
 
   <!-- 🧠 Splash screen -->
   <div id="splash" style="display:flex;justify-content:center;align-items:center;height:100vh;background:#0B1E3F;">
@@ -123,6 +138,9 @@
       setTimeout(() => {
         document.getElementById('splash').style.display = 'none';
         document.getElementById('app').classList.remove('hidden');
+        // 💡 Wstawienie wersji apki po załadowaniu
+        const wersjaEl = document.getElementById("wersjaNum");
+        if (wersjaEl) wersjaEl.textContent = WERSJA_APKI;
       }, 1500);
     });
 
