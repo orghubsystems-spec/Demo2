@@ -85,7 +85,7 @@
 
   <script>
     // 🔁 Auto-aktualizacja
-    const WERSJA_APKI = '1.0.11-DEMO';
+    const WERSJA_APKI = '1.1.11-DEMO';
     const poprzednia = localStorage.getItem('wersjaApki');
     if (poprzednia !== WERSJA_APKI) {
       localStorage.setItem('wersjaApki', WERSJA_APKI);
@@ -204,44 +204,85 @@
       renderTreningi(lista);
     }
 
-    function renderTreningi(lista) {
-      const div = document.getElementById('listaTreningow');
-      if (!lista || !lista.length) { div.innerHTML = "<p>Brak dostępnych wydarzeń</p>"; return; }
+function renderTreningi(lista) {
+  const div = document.getElementById('listaTreningow');
+  if (!lista || !lista.length) { 
+    div.innerHTML = "<p>Brak dostępnych wydarzeń</p>"; 
+    return; 
+  }
 
-      div.innerHTML = lista.map(t => `
-        <div class="card" onclick="pokazZapisanych('${t.id}')" style="cursor:pointer;">
-          <p>
-            <b>${t.data}</b> (${t.dzien}) – ${t.czas}<br>
-            Prowadzący: <b>${t.trener}</b><br>
-            Grupy: ${t.grupyTreningu}<br>
-            Zapisanych: ${t.zapisanych}
-          </p>
-          <div id="lista-${t.id}" class="lista-zapisanych hidden"></div>
-          <div style="display:flex; justify-content:center; gap:10px; margin-top:8px;">
-            <button id="btn-${t.id}" ${t.zapisany ? 'disabled' : ''} onclick="event.stopPropagation(); zapiszSie('${t.id}')">
-              ${t.zapisany ? 'Zapisano ✅' : 'Zapisz się'}
-            </button>
-            <button id="wypisz-${t.id}" ${t.zapisany ? '' : 'disabled'} style="background:#2a3f66;" onclick="event.stopPropagation(); wypiszSie('${t.id}')">
-              Wypisz się
-            </button>
-          </div>
-        </div>
-      `).join('');
+  div.innerHTML = lista.map(t => `
+    <div class="card">
+      <p>
+        <b>${t.data}</b> (${t.dzien}) – ${t.czas}<br>
+        Prowadzący: <b>${t.trener}</b><br>
+        Grupy: ${t.grupyTreningu}<br>
+        Zapisanych: ${t.zapisanych}
+      </p>
+
+      <div style="display:flex; justify-content:center; gap:10px; flex-wrap:wrap; margin-top:8px;">
+        <button id="btn-${t.id}" ${t.zapisany ? 'disabled' : ''} 
+                onclick="event.stopPropagation(); zapiszSie('${t.id}')">
+          ${t.zapisany ? 'Zapisano ✅' : 'Zapisz się'}
+        </button>
+
+        <button id="wypisz-${t.id}" ${t.zapisany ? '' : 'disabled'} 
+                style="background:#2a3f66;" 
+                onclick="event.stopPropagation(); wypiszSie('${t.id}')">
+          Wypisz się
+        </button>
+
+        <button style="background:#244577;" 
+                onclick="event.stopPropagation(); toggleZapisani('${t.id}')">
+          👥 Zapisani
+        </button>
+      </div>
+
+      <div id="zapisani-${t.id}" class="hidden lista-zapisanych"></div>
+    </div>
+  `).join('');
+}
+
+
+async function toggleZapisani(id) {
+  const box = document.getElementById(`zapisani-${id}`);
+  if (!box) return;
+
+  // jeżeli już widoczna – ukryj
+  if (!box.classList.contains('hidden')) {
+    box.classList.add('hidden');
+    box.innerHTML = "";
+    return;
+  }
+
+  // pokaż loader
+  box.classList.remove('hidden');
+  box.innerHTML = '<div class="card" style="background:#0b234a;">⏳ Ładowanie listy...</div>';
+
+  try {
+    const res = await fetch(`${SCRIPT_URL}?action=zapisani&treningId=${encodeURIComponent(id)}`);
+    const lista = await res.json();
+
+    if (!Array.isArray(lista) || lista.length === 0) {
+      box.innerHTML = '<div class="card" style="background:#102752;">Brak zapisanych</div>';
+      return;
     }
 
-    async function pokazZapisanych(id) {
-      const el = document.getElementById(`lista-${id}`);
-      if (!el.classList.contains("hidden")) { el.classList.add("hidden"); el.innerHTML = ""; return; }
-      el.classList.remove("hidden"); el.innerHTML = "<p style='color:#bbb;'>Ładowanie listy...</p>";
-      try {
-        const res = await fetch(`${SCRIPT_URL}?action=zapisani&treningId=${encodeURIComponent(id)}`);
-        const lista = await res.json();
-        if (!lista || !lista.length) { el.innerHTML = "<p style='color:#bbb;'>Brak zapisanych</p>"; return; }
-        el.innerHTML = lista.map((os, i) => `<div>${i + 1}. ${os.nazwisko}</div>`).join('');
-      } catch (e) {
-        el.innerHTML = "<p style='color:#f55;'>Błąd pobierania listy</p>"; console.error(e);
-      }
-    }
+    const html = `
+      <div class="card" style="background:#0d2961;">
+        <b>Lista zapisanych:</b>
+        <ol style="margin:6px 0 0 20px; padding:0;">
+          ${lista.map((p,i) => `<li>${p.nazwisko}</li>`).join('')}
+        </ol>
+      </div>`;
+    box.innerHTML = html;
+
+  } catch (e) {
+    console.error(e);
+    box.innerHTML = '<div class="card" style="background:#7a1f1f;">⚠️ Błąd pobierania listy</div>';
+  }
+}
+
 
     async function zapiszSie(id) {
       try {
