@@ -181,6 +181,505 @@
   </style>
 
   <script>
+    const WERSJA_APKI = '1.07.02';
+    const poprzednia = localStorage.getItem('wersjaApki');
+    if (poprzednia !== WERSJA_APKI) {
+      localStorage.setItem('wersjaApki', WERSJA_APKI);
+      location.reload(true);
+    }
+
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('service-worker.js')
+        .then(r => console.log("✅ SW zarejestrowany:", r))
+        .catch(e => console.error("❌ Błąd SW:", e));
+    }
+  </script>
+</head>
+
+<body>
+  <div id="wersjaApki"><span id="wersjaNum"></span></div>
+  
+<div id="busyOverlay" class="hidden" style="
+  position:fixed; inset:0; background:rgba(0,0,0,0.85);
+  display:flex; flex-direction:column; justify-content:center; align-items:center;
+  z-index:5000; padding:24px;
+">
+  <div style="font-size:20px; margin-bottom:12px;">⏳ Przygotowuję aplikację…</div>
+  <div id="busyOverlayMsg" style="opacity:.85; max-width:320px; line-height:1.4;">
+    Tworzę pliki klubu, ustawiam sezon i konfigurację.
+  </div>
+</div>
+
+  
+  <!-- Splash -->
+  <div id="splash">
+    <img src="icon-512.png" class="logo-fadein" alt="Logo">
+  </div>
+
+  <!-- Główna aplikacja -->
+  <div id="app" class="hidden">
+
+   <!-- LANDING ORGHUB -->
+<div id="orgHubLandingView" class="container hidden">
+  <h1 style="margin-bottom:8px;">ORGHUB SYSTEMS</h1>
+  <p style="opacity:0.8;margin-top:0;">Panel startowy</p>
+  <button class="full-btn" onclick="goToConfig()">Skonfiguruj klub</button>
+</div>
+
+<!-- KONFIGURACJA KLUBU -->
+<div id="clubConfigView" class="container hidden">
+  <h1>Konfiguracja klubu</h1>
+
+  <div class="card" style="max-width:320px;margin:12px auto;">
+    <!-- LOGO -->
+    <button class="full-btn" onclick="pickLogo()">Wgraj swoje logo</button>
+    <div style="margin-top:8px;">
+      <img id="cfgLogoPreview" src="" alt="" style="display:none;width:160px;border-radius:10px;border:1px solid #444;">
+      <div style="font-size:12px;opacity:0.75;margin-top:6px;">
+        PNG/JPG, najlepiej kwadrat, np. 512×512
+      </div>
+      <input id="cfgLogoInput" type="file" accept="image/*" class="hidden" />
+    </div>
+
+    <!-- NAZWA -->
+    <button class="full-btn alt" id="btnClubName" onclick="clubNameEditStart()">
+    <span id="clubNameText">Podaj nazwę klubu</span>
+    <input id="clubNameInput" type="text" class="hidden"
+         placeholder="Wpisz nazwę klubu"
+         style="width:100%;box-sizing:border-box;padding:8px;border-radius:6px;border:none;">
+    </button>
+
+    <div id="cfgClubNameLabel" style="margin-top:6px;opacity:0.9;"></div>
+
+    <!-- SEZON START -->
+    <button class="full-btn alt" onclick="editSeasonStart()">Początek sezonu</button>
+    <div id="cfgSeasonStartLabel" style="margin-top:6px;opacity:0.9;"></div>
+
+    <!-- SEZON END -->
+    <button class="full-btn alt" onclick="editSeasonEnd()">Koniec sezonu</button>
+    <div id="cfgSeasonEndLabel" style="margin-top:6px;opacity:0.9;"></div>
+
+    <!-- KOLOR TŁA -->
+    <button class="full-btn alt" onclick="toggleColorPicker(true)">Wybierz kolor tła</button>
+    <div id="cfgColorLabel" style="margin-top:6px;opacity:0.9;"></div>
+
+    <div id="cfgColorGrid" class="hidden" 
+          style="margin-top:10px;display:grid;grid-template-columns:repeat(4, 1fr);gap:8px;">
+      <!-- kolory wypełnimy z JS -->
+    </div>
+
+    <!-- EMAIL -->
+    <button class="full-btn alt" onclick="editEmail()">Twój email</button>
+    <div id="cfgEmailLabel" style="margin-top:6px;opacity:0.9;"></div>
+
+    <button class="full-btn" style="margin-top:14px;" onclick="submitClubConfig()">Wyślij</button>
+    <button class="full-btn alt" onclick="goBackFromConfig()">⬅ Powrót</button>
+
+    <p id="cfgMsg" style="margin-top:10px;"></p>
+  </div>
+</div>
+
+<!-- START / ORGHUB -->
+<div id="orgHubStartView" class="container hidden">
+  <div style="margin-top:30px;">
+    <img src="icon-512.png" style="width:220px;border-radius:24px;opacity:.95;">
+  </div>
+
+  <h1 style="margin-top:18px;">ORGHUB SYSTEMS</h1>
+  <div style="opacity:.75;margin:10px auto 20px;max-width:320px;line-height:1.4;">
+    Kreator utworzy pliki Twojego klubu i przygotuje aplikację do działania.
+  </div>
+
+  <button class="full-btn" onclick="goToView('clubWizardView')">⚙️ Skonfiguruj klub</button>
+
+  <div style="opacity:.55;margin-top:18px;font-size:13px;">
+    Masz już klub na tym urządzeniu? <br>
+    <button class="btn" onclick="pokazClubSetup(true)">Zmień / wybierz clubId</button>
+  </div>
+</div>
+
+    <!-- KREATOR KLUBU -->
+<div id="clubWizardView" class="container hidden">
+  <h1>Konfiguracja klubu</h1>
+
+  <div class="card" style="max-width:320px;margin:12px auto; text-align:left;">
+    <div style="opacity:.8;font-size:13px;margin-bottom:8px;">
+      Uzupełnij dane. Klikasz przycisk → pojawia się okno do wpisania / wyboru.
+    </div>
+
+    <button class="full-btn" onclick="wizPickLogo()">📷 Wgraj swoje logo</button>
+    <div id="wizLogoInfo" style="opacity:.75;font-size:12px;margin:6px 0 10px;">
+      JPG/PNG, najlepiej kwadrat, min. 512×512.
+    </div>
+    <div id="wizLogoPreview" style="margin-bottom:10px;"></div>
+    <input id="wizLogoFile" type="file" accept="image/*" class="hidden">
+
+    <button class="full-btn" onclick="wizPromptText('wizClubName','Podaj nazwę klubu')">🏷️ Podaj nazwę klubu</button>
+    <div id="wizClubNameLabel" style="opacity:.85;margin:6px 0 12px;">—</div>
+
+    <button class="full-btn" onclick="wizPromptMonthYear('wizSeasonStart','Początek sezonu (MM-RRRR)')">📅 Początek sezonu</button>
+    <div id="wizSeasonStartLabel" style="opacity:.85;margin:6px 0 12px;">—</div>
+
+    <button class="full-btn" onclick="wizPromptMonthYear('wizSeasonEnd','Koniec sezonu (MM-RRRR)')">🏁 Koniec sezonu</button>
+    <div id="wizSeasonEndLabel" style="opacity:.85;margin:6px 0 12px;">—</div>
+
+    <button class="full-btn" onclick="wizPickColor()">🎨 Wybierz kolor tła</button>
+    <div id="wizColorLabel" style="opacity:.85;margin:6px 0 12px;display:flex;align-items:center;gap:10px;">
+      <span id="wizColorSwatch" style="width:18px;height:18px;border-radius:6px;border:1px solid #555;display:inline-block;"></span>
+      <span id="wizColorText">—</span>
+    </div>
+
+    <button class="full-btn" onclick="wizPromptText('wizEmail','Twój email')">📩 Twój email</button>
+    <div id="wizEmailLabel" style="opacity:.85;margin:6px 0 12px;">—</div>
+
+    <button class="full-btn" onclick="wizSubmit()">🚀 Wyślij</button>
+    <button class="full-btn alt" onclick="appBack()">⬅ Powrót</button>
+
+    <div id="wizMsg" style="margin-top:10px;opacity:.9;"></div>
+  </div>
+</div>
+
+    
+    <!-- LOGOWANIE -->
+    <div id="loginView" class="container hidden">
+      <img src="https://i.imgur.com/tTBcBSj.jpeg" class="logo" style="width:200px;margin-bottom:20px;">
+      <h1>Logowanie</h1>
+      <div style="opacity:.8; margin-bottom:10px;">
+        Club: <b id="clubIdBadge"></b>
+      </div>
+      <div class="login-box">
+        <input id="numer" type="text" placeholder="Numer / Inicjały">
+        <input id="haslo" type="password" placeholder="Hasło">
+        <button class="full-btn" onclick="zaloguj()">Zaloguj</button>
+        <button class="full-btn alt" onclick="pokazRejestracjaSelect()">Rejestracja</button>
+        <button class="full-btn alt" onclick="pokazClubSetup(true)">⚙ Zmień klub</button>
+      </div>
+      <p id="komunikat"></p>
+    </div>
+
+    <!-- WYBÓR TYP REJESTRACJI -->
+    <div id="registerSelectView" class="container hidden">
+      <h1>Rejestracja</h1>
+      <button class="full-btn" onclick="pokazRejestracjaZawodnik()">Zawodnik</button>
+      <button class="full-btn" onclick="pokazRejestracjaTrener()">Trener</button>
+      <button class="full-btn alt" onclick="appBack()">⬅ Powrót</button>
+    </div>
+
+    <!-- REJESTRACJA ZAWODNIKA -->
+    <div id="registerZawodnikView" class="container hidden">
+      <h1>Rejestracja zawodnika</h1>
+      <div class="login-box">
+        <input id="regNumer" type="number" placeholder="Numer zawodnika">
+        <input id="regNazwisko" type="text" placeholder="Imię i nazwisko">
+        <input id="regHaslo" type="password" placeholder="Ustaw hasło">
+        <button class="full-btn" onclick="wyslijRejestracje()">Zarejestruj</button>
+      </div>
+      <p id="regMsg"></p>
+      <button class="full-btn alt" onclick="appBack()">⬅ Powrót</button>
+    </div>
+
+    <!-- REJESTRACJA TRENERA -->
+    <div id="rejestracjaTrenerView" class="container hidden">
+      <h1>Rejestracja trenera</h1>
+      <div class="login-box">
+        <input id="regNazwiskoTrener" type="text" placeholder="Imię i nazwisko">
+        <input id="regHasloTrener" type="password" placeholder="Ustaw hasło">
+        <button class="full-btn" onclick="wyslijRejestracjeTrener()">Zarejestruj</button>
+        <button class="full-btn alt" onclick="appBack()">⬅ Powrót</button>
+      </div>
+      <p id="regMsgTrener"></p>
+    </div>
+
+    <!-- DODAJ WYDARZENIE (TRENER) -->
+    <div id="trainerDodajWydarzenieView" class="container hidden">
+      <h1>Dodaj wydarzenie</h1>
+
+      <div class="login-box">
+        <input id="eventData" type="date">
+        <input id="eventStart" type="time">
+        <input id="eventEnd" type="time">
+        <input id="eventRodzaj" type="text" placeholder="Rodzaj wydarzenia">
+
+        <select id="eventTrener1" class="select-like-input">
+          <option value="">— wybierz trenera —</option>
+        </select>
+
+        <select id="eventTrener2" class="select-like-input">
+          <option value="">— brak —</option>
+        </select>
+      </div>
+
+      <!-- CHECKBOXY GRUP -->
+      <div style="display:flex; justify-content:center; gap:25px; margin:20px auto 10px auto; width:260px;">
+        <label class="grupa-check"><input type="checkbox" class="eventGrupa" value="G1"><span>G1</span></label>
+        <label class="grupa-check"><input type="checkbox" class="eventGrupa" value="G2"><span>G2</span></label>
+        <label class="grupa-check"><input type="checkbox" class="eventGrupa" value="G3"><span>G3</span></label>
+        <label class="grupa-check"><input type="checkbox" class="eventGrupa" value="G4"><span>G4</span></label>
+        <label class="grupa-check"><input type="checkbox" class="eventGrupa" value="G5"><span>G5</span></label>
+      </div>
+
+      <div style="margin-top:10px;">
+        <label>
+          <input id="eventStat" type="checkbox">
+          Liczyć do statystyk
+        </label>
+      </div>
+
+      <button class="full-btn" onclick="wyslijNoweWydarzenie()">💾 Dodaj wydarzenie</button>
+      <button class="full-btn alt" onclick="appBack()">⬅ Powrót</button>
+
+      <p id="eventMsg" style="margin-top:10px;"></p>
+    </div>
+
+    <!-- PŁATNOŚCI -->
+    <div id="platnosciView" class="container hidden">
+      <h1>Płatności</h1>
+      <div id="listaPlatnosci">Ładowanie...</div>
+    </div>
+
+    <!-- WYDARZENIA (ZAWODNIK) -->
+    <div id="homeView" class="container hidden">
+      <h1 id="tytulTreningow">TWOJE WYDARZENIA</h1>
+      <div id="listaTreningow">Ładowanie...</div>
+      <button onclick="pokazStatystyki()" style="margin-top:20px;">📈 Pokaż statystyki</button>
+      <button onclick="powrotDoPlatnosci()" style="margin-top:10px;background:#333;">⬅ Powrót do płatności</button>
+    </div>
+
+    <!-- STATYSTYKI -->
+    <div id="statsView" class="container hidden">
+      <h1>Moje statystyki</h1>
+      <div id="listaStatystyk">Ładowanie...</div>
+      <button onclick="powrotDoTreningow()" style="margin-top:20px;">⬅ Powrót</button>
+    </div>
+
+    <!-- PANEL TRENERA -->
+    <div id="trainerPanelView" class="container hidden">
+      <h1>Panel trenera</h1>
+      <button class="full-btn" onclick="trainerPokazZawodnicy()">👥 Zawodnicy</button>
+      <button class="full-btn" onclick="trainerPokazWydarzenia()">🏒 Wydarzenia</button>
+      <button class="full-btn alt" onclick="pokazLogowanie()">⬅ Wyloguj</button>
+    </div>
+
+    <!-- LISTA ZAWODNIKÓW (TRENER) -->
+    <div id="trainerZawodnicyView" class="container hidden">
+      <h1>Lista zawodników</h1>
+      <div id="trainerListaZawodnikow">Ładowanie...</div>
+      <button class="full-btn alt" onclick="trainerPowrot()">⬅ Powrót</button>
+    </div>
+
+    <!-- WYDARZENIA (TRENER) -->
+    <div id="trainerWydarzeniaView" class="container hidden">
+      <h1>Wydarzenia</h1>
+      <div id="trainerListaWydarzen">Ładowanie...</div>
+      <button class="full-btn" style="margin-top:20px;" onclick="pokazDodajWydarzenie()">➕ Dodaj wydarzenie</button>
+      <button class="full-btn alt" onclick="trainerPowrot()">⬅ Powrót</button>
+    </div>
+
+    <!-- Popup potwierdzenia usunięcia -->
+    <div id="trainerDeletePopup">
+      <div class="popup-card">
+        <p style="margin-bottom:15px;">Czy napewno chcesz usunąć wydarzenie ?</p>
+        <button class="full-btn" onclick="trainerConfirmDeleteYes()">TAK</button>
+        <button class="full-btn alt" style="margin-top:8px;" onclick="trainerHideDeletePopup()">Anuluj</button>
+      </div>
+    </div>
+  </div><!-- /app -->
+
+  <!-- BUSY OVERLAY -->
+<div id="busyOverlay" class="hidden" style="
+  position:fixed; inset:0; background:rgba(0,0,0,0.75);
+  display:flex; align-items:center; justify-content:center;
+  z-index:5000;">
+  <div class="card" style="max-width:280px;text-align:center;">
+    <div style="font-size:18px;margin-bottom:8px;">⏳ Przygotowuję aplikację…</div>
+    <div id="busyText" style="opacity:0.85;font-size:13px;">Tworzę pliki i ustawienia klubu.</div>
+  </div>
+</div>
+
+  <script>
+  <!DOCTYPE html>
+<html lang="pl">
+<head>
+  <base target="_top">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#000000">
+  <link rel="manifest" href="manifest.json">
+
+  <style>
+    body {
+      font-family: Collage, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #000;
+      color: #fff;
+      text-align: center;
+    }
+    .hidden { display: none; }
+    .container { margin-top: 40px; }
+
+    .login-box input, .login-box select {
+      display: block;
+      margin: 10px auto;
+      padding: 8px;
+      width: 200px;
+      border-radius: 6px;
+      border: none;
+    }
+
+    button {
+      padding: 8px 16px;
+      border: none;
+      background: red;
+      color: white;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    button[disabled] {
+      background: gray !important;
+      cursor: default;
+    }
+
+    .full-btn {
+      display: block;
+      width: 200px;
+      margin: 10px auto;
+      padding: 8px;
+      border-radius: 6px;
+      background: red;
+      border: none;
+      color: white;
+      cursor: pointer;
+    }
+    .full-btn.alt { background: #333; }
+
+    .card {
+      border: 1px solid #555;
+      border-radius: 10px;
+      padding: 10px;
+      margin: 10px;
+      background: #111;
+    }
+
+    .lista-zapisanych {
+      background: rgba(255,255,255,0.05);
+      border-radius: 6px;
+      padding: 8px;
+      margin-top: 6px;
+      text-align: left;
+      font-size: 0.9rem;
+      line-height: 1.4;
+    }
+
+    #wersjaApki {
+      position: fixed;
+      top: 8px;
+      right: 12px;
+      font-size: 0.85rem;
+      color: rgba(255,255,255,0.6);
+      user-select: none;
+      z-index: 1000;
+    }
+
+    button.loading {
+      background: #222 !important;
+      opacity: 0.6;
+      pointer-events: none;
+      transition: background 0.2s ease, opacity 0.2s ease;
+    }
+
+    /* Splash */
+    #splash {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      background: #000;
+    }
+    .logo-fadein {
+      width: 300px;
+      opacity: 0;
+      filter: brightness(20%) blur(2px);
+      transform: scale(0.2);
+      animation: wjazdLogo 5s ease-out forwards;
+    }
+    @keyframes wjazdLogo {
+      0%   { opacity: 0;   transform: scale(0.2); filter: brightness(20%) blur(4px); }
+      60%  { opacity: 1;   transform: scale(1.1); filter: brightness(160%) blur(0); }
+      85%  { opacity: 1;   transform: scale(1);   filter: brightness(100%); }
+      100% { opacity: 0;   transform: scale(1);   filter: brightness(50%) blur(2px); }
+    }
+
+    .select-like-input {
+      width: 200px;
+      height: 36px;
+      margin: 10px auto;
+      border-radius: 6px;
+      border: none;
+      padding: 6px;
+      font-size: 14px;
+      display: block;
+    }
+
+    .grupa-check {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      font-size: 14px;
+      color: white;
+    }
+    .grupa-check input {
+      margin-bottom: 4px;
+      transform: scale(1.3);
+    }
+
+    .btn {
+      padding: 6px 12px;
+      border-radius: 6px;
+      border: none;
+      background: #444;
+      color: #fff;
+      cursor: pointer;
+      margin: 2px;
+    }
+    .btn.danger {
+      background: #800;
+    }
+
+    #trainerDeletePopup {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.7);
+      justify-content: center;
+      align-items: center;
+      z-index: 2000;
+      display: none;
+    }
+
+    #trainerDeletePopup.show {
+      display: flex;
+    }
+
+    #trainerDeletePopup .popup-card {
+      background: #111;
+      border: 1px solid #555;
+      border-radius: 10px;
+      padding: 16px 20px;
+      max-width: 260px;
+      text-align: center;
+    }
+    
+    /* ===== BUSY OVERLAY ===== */
+    #busyOverlay.hidden {
+      display: none !important;
+    }
+    
+    button input { font-size: 14px;
+    }
+
+    
+  </style>
+
+  <script>
     const WERSJA_APKI = '1.06.02';
     const poprzednia = localStorage.getItem('wersjaApki');
     if (poprzednia !== WERSJA_APKI) {
@@ -1638,5 +2137,7 @@ function clubNameEditCancel() {
 
 
   </script>
+</body>
+</html>
 </body>
 </html>
