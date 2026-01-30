@@ -3,75 +3,64 @@
 <head>
   <base target="_top">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <meta name="theme-color" content="#F47B20">
+  <meta name="theme-color" content="#000000">
   <link rel="manifest" href="manifest.json">
 
   <style>
     body {
-      font-family: 'Segoe UI', Roboto, sans-serif;
+      font-family: Collage, sans-serif;
       margin: 0;
       padding: 0;
-      background-color: #0B1E3F;
+      background-color: #000;
       color: #fff;
       text-align: center;
     }
     .hidden { display: none; }
     .container { margin-top: 40px; }
-    .login-box input {
+
+    .login-box input, .login-box select {
       display: block;
       margin: 10px auto;
-      padding: 10px;
-      width: 220px;
-      border-radius: 8px;
-      border: 1px solid #223B6C;
-      background: #102752;
-      color: #fff;
-    }
-    .login-box input::placeholder { color: #bbb; }
-    button {
-      padding: 10px 18px;
+      padding: 8px;
+      width: 200px;
+      border-radius: 6px;
       border: none;
-      background: #F47B20;
-      color: white;
-      border-radius: 8px;
-      cursor: pointer;
-      font-weight: 600;
     }
-    button:hover:not([disabled]) {
-      background: #ff973f;
+
+    button {
+      padding: 8px 16px;
+      border: none;
+      background: red;
+      color: white;
+      border-radius: 6px;
+      cursor: pointer;
     }
     button[disabled] {
-      background: #555 !important;
+      background: gray !important;
       cursor: default;
     }
+
+    .full-btn {
+      display: block;
+      width: 200px;
+      margin: 10px auto;
+      padding: 8px;
+      border-radius: 6px;
+      background: red;
+      border: none;
+      color: white;
+      cursor: pointer;
+    }
+    .full-btn.alt { background: #333; }
+
     .card {
-      border: 1px solid #244577;
+      border: 1px solid #555;
       border-radius: 10px;
-      padding: 12px;
+      padding: 10px;
       margin: 10px;
-      background: #122b59;
-      transition: background 0.2s ease;
-    }
-    .card:hover { background: #15346a; }
-    h1 {
-      color: #F47B20;
-      margin-bottom: 20px;
+      background: #111;
     }
 
-    /* 🔹 Wersja apki */
-    #wersjaApki {
-      position: fixed;
-      top: 8px;
-      right: 12px;
-      font-size: 0.85rem;
-      color: rgba(255, 255, 255, 0.6);
-      font-family: Arial, sans-serif;
-      user-select: none;
-      z-index: 1000;
-      letter-spacing: 0.5px;
-    }
-
-    /* Lista zapisanych */
     .lista-zapisanych {
       background: rgba(255,255,255,0.05);
       border-radius: 6px;
@@ -81,254 +70,933 @@
       font-size: 0.9rem;
       line-height: 1.4;
     }
+
+    #wersjaApki {
+      position: fixed;
+      top: 8px;
+      right: 12px;
+      font-size: 0.85rem;
+      color: rgba(255,255,255,0.6);
+      user-select: none;
+      z-index: 1000;
+    }
+
+    button.loading {
+      background: #222 !important;
+      opacity: 0.6;
+      pointer-events: none;
+      transition: background 0.2s ease, opacity 0.2s ease;
+    }
+
+    /* Splash */
+    #splash {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      background: #000;
+    }
+    .logo-fadein {
+      width: 300px;
+      opacity: 0;
+      filter: brightness(20%) blur(2px);
+      transform: scale(0.2);
+      animation: wjazdLogo 5s ease-out forwards;
+    }
+    @keyframes wjazdLogo {
+      0%   { opacity: 0;   transform: scale(0.2); filter: brightness(20%) blur(4px); }
+      60%  { opacity: 1;   transform: scale(1.1); filter: brightness(160%) blur(0); }
+      85%  { opacity: 1;   transform: scale(1);   filter: brightness(100%); }
+      100% { opacity: 0;   transform: scale(1);   filter: brightness(50%) blur(2px); }
+    }
+
+    .select-like-input {
+      width: 200px;
+      height: 36px;
+      margin: 10px auto;
+      border-radius: 6px;
+      border: none;
+      padding: 6px;
+      font-size: 14px;
+      display: block;
+    }
+
+    .grupa-check {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      font-size: 14px;
+      color: white;
+    }
+    .grupa-check input {
+      margin-bottom: 4px;
+      transform: scale(1.3);
+    }
+
+    .btn {
+      padding: 6px 12px;
+      border-radius: 6px;
+      border: none;
+      background: #444;
+      color: #fff;
+      cursor: pointer;
+      margin: 2px;
+    }
+    .btn.danger {
+      background: #800;
+    }
+
+    #trainerDeletePopup {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.7);
+      justify-content: center;
+      align-items: center;
+      z-index: 2000;
+      display: none;
+    }
+
+    #trainerDeletePopup.show {
+      display: flex;
+    }
+
+    #trainerDeletePopup .popup-card {
+      background: #111;
+      border: 1px solid #555;
+      border-radius: 10px;
+      padding: 16px 20px;
+      max-width: 260px;
+      text-align: center;
+    }
   </style>
 
   <script>
-    // 🔁 Auto-aktualizacja
-    const WERSJA_APKI = '1.2.12-DEMO';
+    const WERSJA_APKI = 'ORG_HUB_APP';
     const poprzednia = localStorage.getItem('wersjaApki');
     if (poprzednia !== WERSJA_APKI) {
       localStorage.setItem('wersjaApki', WERSJA_APKI);
       location.reload(true);
     }
 
-    // 🧱 Service Worker
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('service-worker.js')
-        .then(reg => console.log("✅ Service Worker zarejestrowany:", reg))
-        .catch(err => console.error("❌ Błąd SW:", err));
+        .then(r => console.log("✅ SW zarejestrowany:", r))
+        .catch(e => console.error("❌ Błąd SW:", e));
     }
   </script>
 </head>
 
 <body>
-  <!-- 🔹 Wersja -->
-  <div id="wersjaApki">v<span id="wersjaNum"></span></div>
+  <div id="wersjaApki"><span id="wersjaNum"></span></div>
 
-  <!-- 🧠 Splash -->
-  <div id="splash" style="display:flex;justify-content:center;align-items:center;height:100vh;background:#0B1E3F;">
-    <img src="icon-512.png" style="width:200px;" alt="Logo OrgHub">
+  <!-- Splash -->
+  <div id="splash">
+    <img src="icon-512.png" class="logo-fadein" alt="Logo">
   </div>
 
-  <!-- 🔐 App -->
+  <!-- Główna aplikacja -->
   <div id="app" class="hidden">
-    <div id="loginView" class="container">
-      <img src="icon-192.png" class="logo" style="width:140px;margin-bottom:15px;">
-      <h1>OrgHub Systems</h1>
-      <p style="color:#ccc;">Panel demonstracyjny logowania</p>
+
+    <!-- WYBÓR KLUBU -->
+    <div id="clubSetupView" class="container hidden">
+      <h1>Wybór klubu</h1>
       <div class="login-box">
-        <input id="numer" type="number" placeholder="Numer użytkownika">
+        <input id="clubIdInput" type="text" placeholder="clubId (np. klub_testowy_core)">
+        <button class="full-btn" onclick="zapiszClubId()">Zapisz</button>
+        <button class="full-btn alt" onclick="wyczyscClubId()">Wyczyść</button>
+      </div>
+      <p id="clubSetupMsg"></p>
+      <p style="opacity:.7;font-size:.9rem;margin-top:20px;">
+        Tip: clubId zapisuje się w telefonie/kompie (localStorage).
+      </p>
+    </div>
+
+    <!-- LOGOWANIE -->
+    <div id="loginView" class="container hidden">
+      <img src="https://i.imgur.com/tTBcBSj.jpeg" class="logo" style="width:200px;margin-bottom:20px;">
+      <h1>Logowanie</h1>
+      <div style="opacity:.8; margin-bottom:10px;">
+        Club: <b id="clubIdBadge"></b>
+      </div>
+      <div class="login-box">
+        <input id="numer" type="text" placeholder="Numer / Inicjały">
         <input id="haslo" type="password" placeholder="Hasło">
-        <button onclick="zaloguj()">Zaloguj</button>
+        <button class="full-btn" onclick="zaloguj()">Zaloguj</button>
+        <button class="full-btn alt" onclick="pokazRejestracjaSelect()">Rejestracja</button>
+        <button class="full-btn alt" onclick="pokazClubSetup(true)">⚙ Zmień klub</button>
       </div>
       <p id="komunikat"></p>
     </div>
 
-    <!-- 💳 Płatności -->
+    <!-- WYBÓR TYP REJESTRACJI -->
+    <div id="registerSelectView" class="container hidden">
+      <h1>Rejestracja</h1>
+      <button class="full-btn" onclick="pokazRejestracjaZawodnik()">Zawodnik</button>
+      <button class="full-btn" onclick="pokazRejestracjaTrener()">Trener</button>
+      <button class="full-btn alt" onclick="appBack()">⬅ Powrót</button>
+    </div>
+
+    <!-- REJESTRACJA ZAWODNIKA -->
+    <div id="registerZawodnikView" class="container hidden">
+      <h1>Rejestracja zawodnika</h1>
+      <div class="login-box">
+        <input id="regNumer" type="number" placeholder="Numer zawodnika">
+        <input id="regNazwisko" type="text" placeholder="Imię i nazwisko">
+        <input id="regHaslo" type="password" placeholder="Ustaw hasło">
+        <button class="full-btn" onclick="wyslijRejestracje()">Zarejestruj</button>
+      </div>
+      <p id="regMsg"></p>
+      <button class="full-btn alt" onclick="appBack()">⬅ Powrót</button>
+    </div>
+
+    <!-- REJESTRACJA TRENERA -->
+    <div id="rejestracjaTrenerView" class="container hidden">
+      <h1>Rejestracja trenera</h1>
+      <div class="login-box">
+        <input id="regNazwiskoTrener" type="text" placeholder="Imię i nazwisko">
+        <input id="regHasloTrener" type="password" placeholder="Ustaw hasło">
+        <button class="full-btn" onclick="wyslijRejestracjeTrener()">Zarejestruj</button>
+        <button class="full-btn alt" onclick="appBack()">⬅ Powrót</button>
+      </div>
+      <p id="regMsgTrener"></p>
+    </div>
+
+    <!-- DODAJ WYDARZENIE (TRENER) -->
+    <div id="trainerDodajWydarzenieView" class="container hidden">
+      <h1>Dodaj wydarzenie</h1>
+
+      <div class="login-box">
+        <input id="eventData" type="date">
+        <input id="eventStart" type="time">
+        <input id="eventEnd" type="time">
+        <input id="eventRodzaj" type="text" placeholder="Rodzaj wydarzenia">
+
+        <select id="eventTrener1" class="select-like-input">
+          <option value="">— wybierz trenera —</option>
+        </select>
+
+        <select id="eventTrener2" class="select-like-input">
+          <option value="">— brak —</option>
+        </select>
+      </div>
+
+      <!-- CHECKBOXY GRUP -->
+      <div style="display:flex; justify-content:center; gap:25px; margin:20px auto 10px auto; width:260px;">
+        <label class="grupa-check"><input type="checkbox" class="eventGrupa" value="G1"><span>G1</span></label>
+        <label class="grupa-check"><input type="checkbox" class="eventGrupa" value="G2"><span>G2</span></label>
+        <label class="grupa-check"><input type="checkbox" class="eventGrupa" value="G3"><span>G3</span></label>
+        <label class="grupa-check"><input type="checkbox" class="eventGrupa" value="G4"><span>G4</span></label>
+        <label class="grupa-check"><input type="checkbox" class="eventGrupa" value="G5"><span>G5</span></label>
+      </div>
+
+      <div style="margin-top:10px;">
+        <label>
+          <input id="eventStat" type="checkbox">
+          Liczyć do statystyk
+        </label>
+      </div>
+
+      <button class="full-btn" onclick="wyslijNoweWydarzenie()">💾 Dodaj wydarzenie</button>
+      <button class="full-btn alt" onclick="appBack()">⬅ Powrót</button>
+
+      <p id="eventMsg" style="margin-top:10px;"></p>
+    </div>
+
+    <!-- PŁATNOŚCI -->
     <div id="platnosciView" class="container hidden">
-      <h1>Składki i opłaty</h1>
+      <h1>Płatności</h1>
       <div id="listaPlatnosci">Ładowanie...</div>
     </div>
 
-    <!-- 📅 Treningi -->
+    <!-- WYDARZENIA (ZAWODNIK) -->
     <div id="homeView" class="container hidden">
-      <h1 id="tytulTreningow">Wydarzenia</h1>
+      <h1 id="tytulTreningow">TWOJE WYDARZENIA</h1>
       <div id="listaTreningow">Ładowanie...</div>
-      <button onclick="pokazStatystyki()" style="margin-top:20px;">📊 Pokaż statystyki</button>
+      <button onclick="pokazStatystyki()" style="margin-top:20px;">📈 Pokaż statystyki</button>
+      <button onclick="powrotDoPlatnosci()" style="margin-top:10px;background:#333;">⬅ Powrót do płatności</button>
     </div>
 
-    <!-- 📈 Statystyki -->
+    <!-- STATYSTYKI -->
     <div id="statsView" class="container hidden">
-      <h1>Twoje statystyki</h1>
+      <h1>Moje statystyki</h1>
       <div id="listaStatystyk">Ładowanie...</div>
       <button onclick="powrotDoTreningow()" style="margin-top:20px;">⬅ Powrót</button>
     </div>
-  </div>
+
+    <!-- PANEL TRENERA -->
+    <div id="trainerPanelView" class="container hidden">
+      <h1>Panel trenera</h1>
+      <button class="full-btn" onclick="trainerPokazZawodnicy()">👥 Zawodnicy</button>
+      <button class="full-btn" onclick="trainerPokazWydarzenia()">🏒 Wydarzenia</button>
+      <button class="full-btn alt" onclick="pokazLogowanie()">⬅ Wyloguj</button>
+    </div>
+
+    <!-- LISTA ZAWODNIKÓW (TRENER) -->
+    <div id="trainerZawodnicyView" class="container hidden">
+      <h1>Lista zawodników</h1>
+      <div id="trainerListaZawodnikow">Ładowanie...</div>
+      <button class="full-btn alt" onclick="trainerPowrot()">⬅ Powrót</button>
+    </div>
+
+    <!-- WYDARZENIA (TRENER) -->
+    <div id="trainerWydarzeniaView" class="container hidden">
+      <h1>Wydarzenia</h1>
+      <div id="trainerListaWydarzen">Ładowanie...</div>
+      <button class="full-btn" style="margin-top:20px;" onclick="pokazDodajWydarzenie()">➕ Dodaj wydarzenie</button>
+      <button class="full-btn alt" onclick="trainerPowrot()">⬅ Powrót</button>
+    </div>
+
+    <!-- Popup potwierdzenia usunięcia -->
+    <div id="trainerDeletePopup">
+      <div class="popup-card">
+        <p style="margin-bottom:15px;">Czy napewno chcesz usunąć wydarzenie ?</p>
+        <button class="full-btn" onclick="trainerConfirmDeleteYes()">TAK</button>
+        <button class="full-btn alt" style="margin-top:8px;" onclick="trainerHideDeletePopup()">Anuluj</button>
+      </div>
+    </div>
+  </div><!-- /app -->
 
   <script>
-    // Splash
+    /* =================== START / INTRO =================== */
+    function odtworzIntroSound() {
+      try {
+        const audio = new Audio("sound.mp3");
+        audio.volume = 0.7;
+        audio.play().catch(e => console.warn("Nie można odtworzyć dźwięku:", e));
+      } catch (err) {
+        console.error("Błąd dźwięku:", err);
+      }
+    }
+
+    /* =================== KONFIG / GLOBALNE =================== */
+
+    // ✅ TU WSTAW SWÓJ NOWY CORE (WebApp /exec)
+    const CORE_URL = "https://script.google.com/macros/s/AKfycbwn7Zb9uotc34HNLAsr79r5G5ctr2G2PzIxmZZFyQfeDD2Q8vecZCArQ-ezKVB5TcOexw/exec";
+
+    let clubId = localStorage.getItem("clubId") || "";
+    let numerZalogowanego = null;
+    let grupaZalogowanego = null;
+    window.grupyTrenera = "";
+    let currentView = "loginView";
+
+    function refreshClubBadge_() {
+      const el = document.getElementById("clubIdBadge");
+      if (el) el.textContent = clubId || "—";
+    }
+
+    function requireClubId() {
+      if (!clubId) throw new Error("Brak clubId. Ustaw clubId w 'Wybór klubu'.");
+    }
+
+    async function apiGet(action, params = {}) {
+      requireClubId();
+      const url = new URL(CORE_URL);
+      url.searchParams.set("action", action);
+      url.searchParams.set("clubId", clubId);
+      Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v ?? ""));
+      const res = await fetch(url.toString(), { cache: "no-store" });
+      return res.json();
+    }
+
+    async function apiPost(payload = {}) {
+      requireClubId();
+      const body = new URLSearchParams({ clubId, ...payload });
+      const res = await fetch(CORE_URL, { method: "POST", body });
+      return res.json();
+    }
+
+    function ukryjWszystkie() {
+      document.querySelectorAll(".container").forEach(v => v.classList.add("hidden"));
+    }
+
+    function goToView(viewId, options = {}) {
+      const { replace = false } = options;
+      ukryjWszystkie();
+      const el = document.getElementById(viewId);
+      if (el) el.classList.remove("hidden");
+      currentView = viewId;
+      const state = { view: viewId };
+
+      try {
+        if (replace) history.replaceState(state, "", "");
+        else history.pushState(state, "", "");
+      } catch (e) {
+        console.warn("History API error:", e);
+      }
+    }
+
+    function showViewFromHistory(viewId) {
+      ukryjWszystkie();
+      const el = document.getElementById(viewId);
+      if (el) el.classList.remove("hidden");
+      currentView = viewId;
+    }
+
+    function appBack() {
+      history.back();
+    }
+
+    window.addEventListener("popstate", (event) => {
+      const state = event.state;
+      if (state && state.view) showViewFromHistory(state.view);
+      else showViewFromHistory(clubId ? "loginView" : "clubSetupView");
+    });
+
     window.addEventListener('load', () => {
+      odtworzIntroSound();
       setTimeout(() => {
         document.getElementById('splash').style.display = 'none';
         document.getElementById('app').classList.remove('hidden');
-        const wersjaEl = document.getElementById("wersjaNum");
-        if (wersjaEl) wersjaEl.textContent = WERSJA_APKI;
-      }, 1500);
+        document.getElementById("wersjaNum").textContent = WERSJA_APKI;
+
+        try {
+          history.replaceState({ view: clubId ? "loginView" : "clubSetupView" }, "", "");
+        } catch (e) {}
+
+        refreshClubBadge_();
+        showViewFromHistory(clubId ? "loginView" : "clubSetupView");
+      }, 5000);
     });
 
-    let numerZalogowanego = null;
-    let grupaZalogowanego = null;
+    /* =================== WYBÓR KLUBU =================== */
+    function pokazClubSetup(replace = false) {
+      goToView("clubSetupView", { replace });
+      const input = document.getElementById("clubIdInput");
+      if (input) input.value = clubId || "";
+      const msg = document.getElementById("clubSetupMsg");
+      if (msg) msg.innerText = "";
+    }
 
-    // 🔗 Endpoint
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwZv3bu2sqAgmVXlTVxYDtzii1BTsOSNPi1kG9yzOFt9b3bUJX-DRTdglOWr0ipDm-nGg/exec";
+    function wyczyscClubId() {
+      clubId = "";
+      localStorage.removeItem("clubId");
+      const input = document.getElementById("clubIdInput");
+      if (input) input.value = "";
+      const msg = document.getElementById("clubSetupMsg");
+      if (msg) msg.innerText = "";
+      refreshClubBadge_();
+    }
 
-    // 🔐 Logowanie
+    async function zapiszClubId() {
+      const msg = document.getElementById("clubSetupMsg");
+      const val = (document.getElementById("clubIdInput").value || "").trim();
+      if (!val) { msg.innerText = "Wpisz clubId."; return; }
+
+      clubId = val;
+      localStorage.setItem("clubId", clubId);
+      refreshClubBadge_();
+      msg.innerText = "✅ Zapisano. Przechodzę do logowania…";
+      setTimeout(() => goToView("loginView", { replace:true }), 250);
+    }
+
+    /* =================== NAWIGACJA WIDOKAMI =================== */
+    function pokazLogowanie() {
+      numerZalogowanego = null;
+      grupaZalogowanego = null;
+      window.grupyTrenera = "";
+      if (!clubId) { pokazClubSetup(true); return; }
+      refreshClubBadge_();
+      goToView("loginView");
+    }
+
+    function pokazRejestracjaSelect() { goToView("registerSelectView"); }
+    function pokazRejestracjaZawodnik() { goToView("registerZawodnikView"); }
+    function pokazRejestracjaTrener() { goToView("rejestracjaTrenerView"); }
+
+    /* =================== LOGOWANIE =================== */
     async function zaloguj() {
-      const numer = document.getElementById("numer").value.trim();
+      const login = document.getElementById("numer").value.trim();
       const haslo = document.getElementById("haslo").value.trim();
       const komunikat = document.getElementById("komunikat");
-      if (!numer || !haslo) { komunikat.innerText = "Podaj numer użytkownika i hasło."; return; }
+
+      if (!clubId) { komunikat.innerText = "Ustaw clubId najpierw."; pokazClubSetup(); return; }
+      if (!login || !haslo) { komunikat.innerText = "Podaj login i hasło."; return; }
 
       komunikat.innerText = "Trwa logowanie...";
+
       try {
-        const res = await fetch(`${SCRIPT_URL}?action=login&numer=${numer}&haslo=${haslo}`);
-        const response = await res.json();
-        if (response.success) {
-          numerZalogowanego = numer;
-          grupaZalogowanego = response.group;
-          komunikat.innerText = "✅ Zalogowano pomyślnie";
-          document.getElementById("loginView").classList.add("hidden");
-          document.getElementById("platnosciView").classList.remove("hidden");
-          const platnosci = await (await fetch(`${SCRIPT_URL}?action=platnosci&numer=${numer}`)).json();
-          renderPlatnosci(platnosci);
-        } else komunikat.innerText = "❌ " + response.message;
-      } catch (err) {
-        komunikat.innerText = "⚠️ Błąd połączenia"; console.error(err);
+        const data = await apiPost({ mode: "login", numer: login, haslo });
+
+        if (!data.success) {
+          komunikat.innerText = "❌ " + (data.message || "Błąd logowania");
+          return;
+        }
+
+        komunikat.innerText = "✅ Zalogowano";
+
+        if (data.role === "zawodnik") {
+          numerZalogowanego = data.login;
+          grupaZalogowanego = data.grupa || "";
+
+          const platnosci = await apiGet("platnosci", { numer: numerZalogowanego });
+
+          if (Array.isArray(platnosci) && platnosci.length > 0) {
+            goToView("platnosciView");
+            renderPlatnosci(platnosci);
+            return;
+          }
+
+          await pokazTreningi();
+          return;
+        }
+
+        if (data.role === "trener") {
+          window.grupyTrenera = data.grupa || "";
+          goToView("trainerPanelView");
+          return;
+        }
+
+      } catch (e) {
+        komunikat.innerText = "Błąd połączenia: " + (e?.message || e);
       }
     }
 
+    /* =================== PANEL TRENERA =================== */
+    function trainerPowrot() { appBack(); }
+
+    async function trainerPokazZawodnicy() {
+      goToView("trainerZawodnicyView");
+      const box = document.getElementById("trainerListaZawodnikow");
+      box.innerHTML = "<div class='card' style='background:#222;'>⏳ Ładowanie...</div>";
+
+      try {
+        const lista = await apiGet("statystykiSum", {});
+        if (!Array.isArray(lista) || lista.length === 0) {
+          box.innerHTML = "<div class='card' style='background:#111;'>Brak danych</div>";
+          return;
+        }
+
+        box.innerHTML = lista.map(z => `
+          <div class="card" style="text-align:left;">
+            <b>#${z.nr}</b> — ${z.nazwisko}<br>
+            <span style="opacity:0.8;">${z.suma} treningów łącznie</span>
+          </div>
+        `).join('');
+
+      } catch (err) {
+        box.innerHTML = "<div class='card' style='background:#700;'>Błąd pobierania danych</div>";
+      }
+    }
+
+    async function trainerPokazWydarzenia() {
+      goToView("trainerWydarzeniaView");
+      const lista = await apiGet("treningiTrener", { grupa: window.grupyTrenera || "" });
+      renderTreningiTrainer(lista);
+    }
+
+    function renderTreningiTrainer(lista) {
+      const div = document.getElementById("trainerListaWydarzen");
+      if (!lista?.length) {
+        div.innerHTML = "<p>Brak wydarzeń</p>";
+        return;
+      }
+
+      div.innerHTML = lista.map(t => `
+        <div class="card" data-event-id="${t.miesiac}-${t.czasCol}">
+          <b>${t.rodzaj}</b> &nbsp;&nbsp; ${t.data} (${t.dzien})<br>
+          Godzina: <b>${t.godzStart}</b> &nbsp;&nbsp;–&nbsp;&nbsp; <b>${t.godzKoniec}</b><br>
+          Trener: <b>${t.trener}</b> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Zapisanych: ${t.zapisanych}<br><br>
+
+          <button class="btn" onclick="trainerToggleZapisani('${t.id}')">👥 Zapisani</button>
+          <button class="btn danger" onclick="trainerShowDeletePopup('${t.miesiac}', ${t.czasCol})">🗑️ Usuń</button>
+          <div id="trainer-zapisani-${t.id}" class="hidden"></div>
+        </div>
+      `).join('');
+    }
+
+    async function trainerToggleZapisani(id) {
+      const box = document.getElementById(`trainer-zapisani-${id}`);
+      if (!box) return;
+
+      if (!box.classList.contains('hidden')) {
+        box.classList.add('hidden');
+        return;
+      }
+
+      box.classList.remove('hidden');
+      box.innerHTML = '<div class="card" style="background:#222;">⏳ Ładowanie...</div>';
+
+      try {
+        const lista = await apiGet("zapisani", { treningId: id });
+
+        if (!Array.isArray(lista) || !lista.length) {
+          box.innerHTML = '<div class="card" style="background:#111;">Brak zapisanych</div>';
+          return;
+        }
+
+        box.innerHTML = `<div class="card" style="background:#111;">
+          <b>Lista zapisanych:</b>
+          <ul style="margin:6px 0 0 20px; padding:0; list-style-type:none;">
+            ${lista.map(p => `<li>${p.nazwisko}</li>`).join('')}
+          </ul>
+        </div>`;
+      } catch {
+        box.innerHTML = '<div class="card" style="background:#700;">Błąd pobierania listy</div>';
+      }
+    }
+
+    /* =================== DODAWANIE WYDARZENIA (TRENER) =================== */
+    async function zaladujListeTrenerow() {
+      try {
+        const lista = await apiGet("getTrenerzy", {});
+        const t1 = document.getElementById("eventTrener1");
+        const t2 = document.getElementById("eventTrener2");
+
+        t1.innerHTML = "<option value=''>— wybierz trenera —</option>";
+        t2.innerHTML = "<option value=''>— Brak —</option>";
+
+        (lista || []).forEach(nazw => {
+          t1.innerHTML += `<option value="${nazw}">${nazw}</option>`;
+          t2.innerHTML += `<option value="${nazw}">${nazw}</option>`;
+        });
+      } catch (err) {
+        console.error("Błąd pobierania trenerów:", err);
+      }
+    }
+
+    function pokazDodajWydarzenie() {
+      goToView("trainerDodajWydarzenieView");
+      zaladujListeTrenerow();
+    }
+
+    function validHour(hhmm) { return /^\d{2}:\d{2}$/.test(hhmm); }
+
+    async function wyslijNoweWydarzenie() {
+      const data = document.getElementById("eventData").value;
+      const start = document.getElementById("eventStart").value;
+      const end = document.getElementById("eventEnd").value;
+      const rodzaj = document.getElementById("eventRodzaj").value;
+      const trener1 = document.getElementById("eventTrener1").value;
+      const trener2 = document.getElementById("eventTrener2").value;
+
+      const grupy = [...document.querySelectorAll(".eventGrupa:checked")]
+        .map(c => c.value)
+        .join(",");
+
+      const liczDoStat = document.getElementById("eventStat").checked;
+      const msg = document.getElementById("eventMsg");
+
+      if (!data || !start || !rodzaj) { msg.innerText = "Uzupełnij: Data, Godzina, Rodzaj."; return; }
+      if (!validHour(start) || !validHour(end)) { msg.innerText = "❌ Godzina w formacie HH:MM."; return; }
+      if (start >= end) { msg.innerText = "❌ Koniec musi być później niż start."; return; }
+
+      msg.innerText = "⏳ Dodawanie wydarzenia...";
+
+      try {
+        const r = await apiPost({
+          action: "dodajWydarzenie",
+          data,
+          godzStart: start,
+          godzKoniec: end,
+          rodzaj,
+          trener1,
+          trener2,
+          grupy,
+          liczDoStatystyk: String(liczDoStat)
+        });
+
+        msg.innerText = r.message || "Nieznany wynik.";
+
+        if (r.success) {
+          document.querySelectorAll("#trainerDodajWydarzenieView input").forEach(i => {
+            if (i.type !== "checkbox") i.value = "";
+            else i.checked = false;
+          });
+          setTimeout(() => trainerPokazWydarzenia(), 800);
+        }
+      } catch (err) {
+        msg.innerText = "❌ Błąd połączenia: " + err;
+      }
+    }
+
+    /* =================== PŁATNOŚCI =================== */
     function renderPlatnosci(lista) {
       const div = document.getElementById("listaPlatnosci");
-      if (!lista || !lista.length) {
-        div.innerHTML = "<p>Brak zaległości ✅</p><button onclick='pokazTreningi()'>Dalej ➡</button>"; return;
+      if (!lista?.length) {
+        div.innerHTML = "<p>Brak zaległości ✅</p>" +
+          "<button class='full-btn' onclick='pokazTreningi()'>Dalej ➡</button>";
+        return;
       }
-      div.innerHTML = `<h3>Zaległe składki:</h3>` +
-        lista.map(p => `<div class='card' style='background:#a00;'>🔴 ${p.nazwa} – ${p.kwota} zł</div>`).join('') +
-        `<button onclick='pokazTreningi()' style='margin-top:20px;'>Dalej ➡</button>`;
+
+      div.innerHTML =
+        "<h3>Zaległe płatności:</h3>" +
+        lista.map(p =>
+          `<div class='card' style='background:#a00;'>🔴 ${p.nazwa} – ${p.kwota} zł</div>`
+        ).join('') +
+        `<button class='full-btn' onclick='pokazTreningi()' style='margin-top:20px;'>Dalej ➡</button>`;
     }
 
     async function pokazTreningi() {
-      document.getElementById("platnosciView").classList.add("hidden");
-      document.getElementById("homeView").classList.remove("hidden");
-      const lista = await (await fetch(`${SCRIPT_URL}?action=treningi&grupa=${grupaZalogowanego}&numer=${numerZalogowanego}`)).json();
+      goToView("homeView");
+      const lista = await apiGet("treningi", {
+        grupa: grupaZalogowanego,
+        numer: numerZalogowanego
+      });
       renderTreningi(lista);
     }
 
-function renderTreningi(lista) {
-  const div = document.getElementById('listaTreningow');
-  if (!lista || !lista.length) { 
-    div.innerHTML = "<p>Brak dostępnych wydarzeń</p>"; 
-    return; 
-  }
+    /* =================== WYDARZENIA (ZAWODNIK) =================== */
+    function renderTreningi(lista) {
+      const div = document.getElementById('listaTreningow');
+      if (!lista?.length) {
+        div.innerHTML = "<p>Brak wydarzeń</p>";
+        return;
+      }
 
-  div.innerHTML = lista.map(t => `
-    <div class="card">
-      <p>
-        <b>${t.data}</b> (${t.dzien}) – ${t.czas}<br>
-        Prowadzący: <b>${t.trener}</b><br>
-        Grupy: ${t.grupyTreningu}<br>
-        Zapisanych: ${t.zapisanych}
-      </p>
+      div.innerHTML = lista.map(t => `
+        <div class="card">
+          <p>
+            <b>${t.rodzaj}</b> &nbsp;&nbsp; ${t.data} (${t.dzien})<br>
+            Godzina: <b>${t.godzStart}</b> &nbsp;&nbsp;–&nbsp;&nbsp; <b>${t.godzKoniec}</b><br>
+            Trener: <b>${t.trener}</b> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Zapisanych: ${t.zapisanych}
+          </p>
 
-      <div style="display:flex; justify-content:center; gap:10px; flex-wrap:wrap; margin-top:8px;">
-        <button id="btn-${t.id}" ${t.zapisany ? 'disabled' : ''} 
-                onclick="event.stopPropagation(); zapiszSie('${t.id}')">
-          ${t.zapisany ? 'Zapisano ✅' : 'Zapisz się'}
-        </button>
+          <div style="display:flex;justify-content:center;gap:8px;flex-wrap:wrap;">
+            <button id="btn-${t.id}" ${t.zapisany ? 'disabled' : ''} onclick="zapiszSie('${t.id}')">
+              ${t.zapisany ? 'Zapisano ✅' : 'Zapisz się'}
+            </button>
+            <button id="wypisz-${t.id}" ${t.zapisany ? '' : 'disabled'} style="background:#444;" onclick="wypiszSie('${t.id}')">
+              Wypisz się
+            </button>
+            <button style="background:#333;" onclick="toggleZapisani('${t.id}')">👥 Zapisani</button>
+          </div>
 
-        <button id="wypisz-${t.id}" ${t.zapisany ? '' : 'disabled'} 
-                style="background:#2a3f66;" 
-                onclick="event.stopPropagation(); wypiszSie('${t.id}')">
-          Wypisz się
-        </button>
-
-        <button style="background:#244577;" 
-                onclick="event.stopPropagation(); toggleZapisani('${t.id}')">
-          👥 Zapisani
-        </button>
-      </div>
-
-      <div id="zapisani-${t.id}" class="hidden lista-zapisanych"></div>
-    </div>
-  `).join('');
-}
-
-
-async function toggleZapisani(id) {
-  const box = document.getElementById(`zapisani-${id}`);
-  if (!box) return;
-
-  // jeżeli już widoczna – ukryj
-  if (!box.classList.contains('hidden')) {
-    box.classList.add('hidden');
-    box.innerHTML = "";
-    return;
-  }
-
-  // pokaż loader
-  box.classList.remove('hidden');
-  box.innerHTML = '<div class="card" style="background:#0b234a;">⏳ Ładowanie listy...</div>';
-
-  try {
-    const res = await fetch(`${SCRIPT_URL}?action=zapisani&treningId=${encodeURIComponent(id)}`);
-    const lista = await res.json();
-
-    if (!Array.isArray(lista) || lista.length === 0) {
-      box.innerHTML = '<div class="card" style="background:#102752;">Brak zapisanych</div>';
-      return;
+          <div id="zapisani-${t.id}" class="hidden lista-zapisanych"></div>
+        </div>
+      `).join('');
     }
 
-    const html = `
-      <div class="card" style="background:#0d2961;">
-        <b>Lista zapisanych:</b>
-        <ol style="margin:6px 0 0 20px; padding:0;">
-          ${lista.map((p,i) => `<li>${p.nazwisko}</li>`).join('')}
-        </ol>
-      </div>`;
-    box.innerHTML = html;
+    async function toggleZapisani(id) {
+      const box = document.getElementById(`zapisani-${id}`);
+      if (!box) return;
 
-  } catch (e) {
-    console.error(e);
-    box.innerHTML = '<div class="card" style="background:#7a1f1f;">⚠️ Błąd pobierania listy</div>';
-  }
-}
+      if (!box.classList.contains('hidden')) {
+        box.classList.add('hidden');
+        return;
+      }
 
+      box.classList.remove('hidden');
+      box.innerHTML = '<div class="card" style="background:#222;">⏳ Ładowanie...</div>';
+
+      try {
+        const lista = await apiGet("zapisani", { treningId: id });
+
+        if (!Array.isArray(lista) || lista.length === 0) {
+          box.innerHTML = '<div class="card" style="background:#111;">Brak zapisanych</div>';
+          return;
+        }
+
+        box.innerHTML = `<div class="card" style="background:#111;">
+          <b>Lista zapisanych:</b>
+          <ul style="margin:6px 0 0 20px; padding:0; list-style-type:none;">
+            ${lista.map(p => `<li>${p.nazwisko}</li>`).join('')}
+          </ul>
+        </div>`;
+      } catch {
+        box.innerHTML = '<div class="card" style="background:#700;">Błąd pobierania listy</div>';
+      }
+    }
 
     async function zapiszSie(id) {
+      const btn = document.getElementById(`btn-${id}`);
+      const wypiszBtn = document.getElementById(`wypisz-${id}`);
+      const box = document.getElementById(`zapisani-${id}`);
+
+      btn.classList.add("loading");
       try {
-        const res = await fetch(`${SCRIPT_URL}?action=zapisz&numer=${numerZalogowanego}&treningId=${encodeURIComponent(id)}`);
-        const resp = await res.json();
-        if (resp.ok) {
-          const btn = document.getElementById(`btn-${id}`);
-          const wypisz = document.getElementById(`wypisz-${id}`);
-          btn.innerText = "Zapisano ✅"; btn.disabled = true; wypisz.disabled = false;
-        } else alert(resp.message);
-      } catch (e) { alert("Błąd połączenia przy zapisie"); console.error(e); }
+        const r = await apiGet("zapisz", { numer: numerZalogowanego, treningId: id });
+        if (r.ok) {
+          btn.innerText = "Zapisano ✅";
+          btn.disabled = true;
+          wypiszBtn.disabled = false;
+          if (box && !box.classList.contains("hidden")) await odswiezListeZapisanych(id);
+        } else {
+          alert(r.message);
+        }
+      } catch (err) {
+        alert("Błąd połączenia: " + err);
+      } finally {
+        btn.classList.remove("loading");
+      }
     }
 
     async function wypiszSie(id) {
+      const btn = document.getElementById(`wypisz-${id}`);
+      const zapiszBtn = document.getElementById(`btn-${id}`);
+      const box = document.getElementById(`zapisani-${id}`);
+
+      btn.classList.add("loading");
       try {
-        const res = await fetch(`${SCRIPT_URL}?action=wypisz&numer=${numerZalogowanego}&treningId=${encodeURIComponent(id)}`);
-        const resp = await res.json();
-        if (resp.ok) {
-          const btn = document.getElementById(`btn-${id}`);
-          const wypisz = document.getElementById(`wypisz-${id}`);
-          btn.innerText = "Zapisz się"; btn.disabled = false; wypisz.disabled = true;
-        } else alert(resp.message);
-      } catch (e) { alert("Błąd połączenia przy wypisie"); console.error(e); }
+        const r = await apiGet("wypisz", { numer: numerZalogowanego, treningId: id });
+        if (r.ok) {
+          zapiszBtn.innerText = "Zapisz się";
+          zapiszBtn.disabled = false;
+          btn.disabled = true;
+          if (box && !box.classList.contains("hidden")) await odswiezListeZapisanych(id);
+        } else {
+          alert(r.message);
+        }
+      } catch (err) {
+        alert("Błąd połączenia: " + err);
+      } finally {
+        btn.classList.remove("loading");
+      }
     }
 
-    async function pokazStatystyki() {
-      document.getElementById("homeView").classList.add("hidden");
-      document.getElementById("statsView").classList.remove("hidden");
+    async function odswiezListeZapisanych(id) {
+      const box = document.getElementById(`zapisani-${id}`);
+      if (!box) return;
+
+      box.innerHTML = '<div class="card" style="background:#222;">⏳ Odświeżanie...</div>';
       try {
-        const res = await fetch(`${SCRIPT_URL}?action=statystyki&numer=${numerZalogowanego}`);
-        const lista = await res.json();
-        renderStatystyki(lista);
+        const lista = await apiGet("zapisani", { treningId: id });
+
+        if (!Array.isArray(lista) || lista.length === 0) {
+          box.innerHTML = '<div class="card" style="background:#111;">Brak zapisanych</div>';
+          return;
+        }
+
+        box.innerHTML = `<div class="card" style="background:#111;">
+          <b>Lista zapisanych:</b>
+          <ul style="margin:6px 0 0 20px; padding:0; list-style-type:none;">
+            ${lista.map(p => `<li>${p.nazwisko}</li>`).join('')}
+          </ul>
+        </div>`;
       } catch {
-        document.getElementById("listaStatystyk").innerHTML = "<p>⚠️ Błąd połączenia</p>";
+        box.innerHTML = '<div class="card" style="background:#700;">Błąd odświeżania</div>';
       }
+    }
+
+    /* =================== STATYSTYKI =================== */
+    async function pokazStatystyki() {
+      goToView("statsView");
+      const lista = await apiGet("statystyki", { numer: numerZalogowanego });
+      renderStatystyki(lista);
     }
 
     function renderStatystyki(lista) {
       const div = document.getElementById("listaStatystyk");
-      if (!lista || !lista.length) { div.innerHTML = "<p>Brak danych statystyk</p>"; return; }
-      div.innerHTML = lista.map(s => `<div class="card">📅 ${s.miesiac} — ${s.treningi} wydarzeń</div>`).join('');
+      if (!lista?.length) { div.innerHTML = "<p>Brak danych</p>"; return; }
+
+      const suma = lista.reduce((acc, s) => acc + (Number(s.treningi) || 0), 0);
+      div.innerHTML =
+        lista.map(s => `<div class="card">📅 ${s.miesiac} — 🏒 ${s.treningi} treningów</div>`).join('') +
+        `<div class="card" style="background:#222;margin-top:20px;font-weight:bold;">
+          🔥 Łącznie: ${suma} treningów w sezonie
+        </div>`;
     }
 
-    function powrotDoTreningow() {
-      document.getElementById("statsView").classList.add("hidden");
-      document.getElementById("homeView").classList.remove("hidden");
+    function powrotDoTreningow() { appBack(); }
+    function powrotDoPlatnosci() { appBack(); }
+
+    /* =================== REJESTRACJA =================== */
+    async function wyslijRejestracje() {
+      const numer = document.getElementById("regNumer").value.trim();
+      const nazwisko = document.getElementById("regNazwisko").value.trim();
+      const haslo = document.getElementById("regHaslo").value.trim();
+      const msg = document.getElementById("regMsg");
+
+      if (!numer || !nazwisko || !haslo) { msg.innerText = "Wypełnij wszystkie pola."; return; }
+
+      msg.innerText = "⏳ Rejestracja...";
+      try {
+        const data = await apiPost({ mode: "rejestracja", numer, nazwisko, haslo });
+
+        if (data.ok) {
+          document.getElementById("regNumer").value = "";
+          document.getElementById("regNazwisko").value = "";
+          document.getElementById("regHaslo").value = "";
+          msg.innerText = "✅ Rejestracja zakończona!";
+          setTimeout(() => { msg.innerText = ""; pokazLogowanie(); }, 1500);
+        } else {
+          msg.innerText = "❌ " + (data.msg || "Błąd");
+        }
+      } catch (e) {
+        msg.innerText = "Błąd połączenia.";
+      }
+    }
+
+    async function wyslijRejestracjeTrener() {
+      const poleNazw = document.getElementById("regNazwiskoTrener");
+      const poleHaslo = document.getElementById("regHasloTrener");
+      const msg = document.getElementById("regMsgTrener");
+
+      const nazwisko = poleNazw.value.trim();
+      const haslo = poleHaslo.value.trim();
+      if (!nazwisko || !haslo) { msg.innerText = "Wypełnij wszystkie pola."; return; }
+
+      msg.innerText = "⏳ Rejestracja...";
+      try {
+        const data = await apiPost({ mode: "rejestracjaTrener", nazwisko, haslo });
+
+        if (data.ok) {
+          const inic = data.inic || "(?)";
+          msg.innerHTML = `
+            ✅ <b>Zarejestrowano trenera!</b><br>
+            Login do systemu: <b>${inic}</b><br><br>
+            <button class="full-btn" onclick="navigator.clipboard.writeText('${inic}')">📋 Skopiuj login</button>
+          `;
+          poleNazw.value = "";
+          poleHaslo.value = "";
+          setTimeout(() => { msg.innerText = ""; pokazLogowanie(); }, 8000);
+        } else {
+          msg.innerText = "❌ " + (data.msg || "Błąd");
+        }
+      } catch (e) {
+        msg.innerText = "Błąd połączenia.";
+      }
+    }
+
+    /* =================== USUWANIE WYDARZENIA =================== */
+    let deleteMiesiac = null;
+    let deleteCzasCol = null;
+
+    function trainerShowDeletePopup(miesiac, czasCol) {
+      deleteMiesiac = miesiac;
+      deleteCzasCol = czasCol;
+      document.getElementById("trainerDeletePopup").classList.add("show");
+    }
+
+    function trainerHideDeletePopup() {
+      document.getElementById("trainerDeletePopup").classList.remove("show");
+    }
+
+    async function trainerConfirmDeleteYes() {
+      trainerHideDeletePopup();
+
+      const treningId = `${deleteMiesiac}-${deleteCzasCol}`;
+      const eventId = treningId;
+      const card = document.querySelector(`[data-event-id='${eventId}']`);
+
+      if (card) {
+        card.innerHTML = `<div class="card" style="background:#222; text-align:center;">⏳ Usuwam wydarzenie…</div>`;
+      }
+
+      if (!deleteMiesiac || !deleteCzasCol) {
+        if (card) {
+          card.innerHTML = `<div class="card" style="background:#522; text-align:center;">❌ Brak danych do usunięcia.</div>`;
+        }
+        return;
+      }
+
+      try {
+        const data = await apiGet("usunWydarzenie", { treningId });
+
+        if (data.success) {
+          if (card) {
+            card.innerHTML = `<div class="card" style="background:#152; text-align:center;">🗑️ Wydarzenie zostało usunięte</div>`;
+          }
+          setTimeout(() => trainerPokazWydarzenia(), 800);
+        } else {
+          if (card) {
+            card.innerHTML = `<div class="card" style="background:#522; text-align:center;">❌ Błąd usuwania: ${data.error || "Nieznany błąd"}</div>`;
+          }
+        }
+      } catch (err) {
+        if (card) {
+          card.innerHTML = `<div class="card" style="background:#522; text-align:center;">❌ Błąd połączenia: ${err}</div>`;
+        }
+      }
     }
   </script>
 </body>
