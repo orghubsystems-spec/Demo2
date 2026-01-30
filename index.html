@@ -172,12 +172,16 @@
     /* ===== BUSY OVERLAY ===== */
     #busyOverlay.hidden {
       display: none !important;
-}
+    }
+    
+    button input { font-size: 14px;
+    }
+
     
   </style>
 
   <script>
-    const WERSJA_APKI = '1.03.02';
+    const WERSJA_APKI = '1.04.02';
     const poprzednia = localStorage.getItem('wersjaApki');
     if (poprzednia !== WERSJA_APKI) {
       localStorage.setItem('wersjaApki', WERSJA_APKI);
@@ -238,7 +242,13 @@
     </div>
 
     <!-- NAZWA -->
-    <button class="full-btn alt" onclick="editClubName()">Podaj nazwę klubu</button>
+    <button class="full-btn alt" id="btnClubName" onclick="clubNameEditStart()">
+    <span id="clubNameText">Podaj nazwę klubu</span>
+    <input id="clubNameInput" type="text" class="hidden"
+         placeholder="Wpisz nazwę klubu"
+         style="width:100%;box-sizing:border-box;padding:8px;border-radius:6px;border:none;">
+    </button>
+
     <div id="cfgClubNameLabel" style="margin-top:6px;opacity:0.9;"></div>
 
     <!-- SEZON START -->
@@ -1578,6 +1588,99 @@ function editSeasonEnd() {
   renderConfigUI_();
 }
 
+ // --- inline edit: Nazwa klubu ---
+let cfg = window.cfg || { clubName:"", sezonStart:"", sezonEnd:"", email:"", color:"#000000", logoDataUrl:"" };
+window.cfg = cfg;
+
+function clubNameEditStart() {
+  const span = document.getElementById("clubNameText");
+  const inp  = document.getElementById("clubNameInput");
+  if (!span || !inp) return;
+
+  // pokaż input w przycisku
+  span.classList.add("hidden");
+  inp.classList.remove("hidden");
+  inp.value = cfg.clubName || "";
+  inp.focus();
+  inp.select();
+
+  inp.onkeydown = (e) => {
+    if (e.key === "Enter") clubNameEditCommit();
+    if (e.key === "Escape") clubNameEditCancel();
+  };
+  inp.onblur = () => clubNameEditCommit();
+}
+
+function clubNameEditCommit() {
+  const span = document.getElementById("clubNameText");
+  const inp  = document.getElementById("clubNameInput");
+  if (!span || !inp) return;
+
+  const val = (inp.value || "").trim();
+  cfg.clubName = val;
+
+  // przywróć przycisk
+  inp.classList.add("hidden");
+  span.classList.remove("hidden");
+  span.textContent = val ? `Nazwa: ${val}` : "Podaj nazwę klubu";
+}
+
+function clubNameEditCancel() {
+  const span = document.getElementById("clubNameText");
+  const inp  = document.getElementById("clubNameInput");
+  if (!span || !inp) return;
+
+  inp.classList.add("hidden");
+  span.classList.remove("hidden");
+}
+
+ // --- kolory tła (8 kafelków) ---
+const CFG_COLORS = [
+  { name:"Czerń",  hex:"#000000" },
+  { name:"Grafit", hex:"#1b1b1b" },
+
+  { name:"Czerwony", hex:"#d40000" },
+  { name:"Bordo",    hex:"#7a0000" },
+
+  { name:"Niebieski", hex:"#0057ff" },
+  { name:"Granat",    hex:"#0a1f5c" },
+
+  { name:"Zielony", hex:"#00a86b" },
+  { name:"Butelkowy", hex:"#0b3d2e" },
+];
+
+function toggleColorPicker(show) {
+  const grid = document.getElementById("cfgColorGrid");
+  if (!grid) return;
+  if (show) {
+    grid.classList.remove("hidden");
+    renderColorGrid_();
+  } else {
+    grid.classList.add("hidden");
+  }
+}
+
+function renderColorGrid_() {
+  const grid = document.getElementById("cfgColorGrid");
+  if (!grid) return;
+
+  grid.innerHTML = CFG_COLORS.map(c => `
+    <button class="btn" style="height:40px;border-radius:10px;border:1px solid #444;background:${c.hex};"
+      onclick="pickColor_('${c.hex}','${c.name}')">
+    </button>
+  `).join("");
+}
+
+function pickColor_(hex, name) {
+  cfg.color = hex;
+  const lab = document.getElementById("cfgColorLabel");
+  if (lab) lab.textContent = `Kolor: ${name} (${hex})`;
+  toggleColorPicker(false);
+
+  // podgląd natychmiast
+  document.body.style.backgroundColor = hex;
+}
+   
   </script>
 </body>
 </html>
