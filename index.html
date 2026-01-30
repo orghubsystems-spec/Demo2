@@ -168,6 +168,12 @@
       max-width: 260px;
       text-align: center;
     }
+    
+    /* ===== BUSY OVERLAY ===== */
+    #busyOverlay.hidden {
+      display: none !important;
+}
+    
   </style>
 
   <script>
@@ -188,7 +194,19 @@
 
 <body>
   <div id="wersjaApki"><span id="wersjaNum"></span></div>
+  
+<div id="busyOverlay" class="hidden" style="
+  position:fixed; inset:0; background:rgba(0,0,0,0.85);
+  display:flex; flex-direction:column; justify-content:center; align-items:center;
+  z-index:5000; padding:24px;
+">
+  <div style="font-size:20px; margin-bottom:12px;">⏳ Przygotowuję aplikację…</div>
+  <div id="busyOverlayMsg" style="opacity:.85; max-width:320px; line-height:1.4;">
+    Tworzę pliki klubu, ustawiam sezon i konfigurację.
+  </div>
+</div>
 
+  
   <!-- Splash -->
   <div id="splash">
     <img src="icon-512.png" class="logo-fadein" alt="Logo">
@@ -211,6 +229,67 @@
       </p>
     </div>
 
+<!-- START / ORGHUB -->
+<div id="orgHubStartView" class="container hidden">
+  <div style="margin-top:30px;">
+    <img src="icon-512.png" style="width:220px;border-radius:24px;opacity:.95;">
+  </div>
+
+  <h1 style="margin-top:18px;">ORGHUB SYSTEMS</h1>
+  <div style="opacity:.75;margin:10px auto 20px;max-width:320px;line-height:1.4;">
+    Kreator utworzy pliki Twojego klubu i przygotuje aplikację do działania.
+  </div>
+
+  <button class="full-btn" onclick="goToView('clubWizardView')">⚙️ Skonfiguruj klub</button>
+
+  <div style="opacity:.55;margin-top:18px;font-size:13px;">
+    Masz już klub na tym urządzeniu? <br>
+    <button class="btn" onclick="pokazClubSetup(true)">Zmień / wybierz clubId</button>
+  </div>
+</div>
+
+    <!-- KREATOR KLUBU -->
+<div id="clubWizardView" class="container hidden">
+  <h1>Konfiguracja klubu</h1>
+
+  <div class="card" style="max-width:320px;margin:12px auto; text-align:left;">
+    <div style="opacity:.8;font-size:13px;margin-bottom:8px;">
+      Uzupełnij dane. Klikasz przycisk → pojawia się okno do wpisania / wyboru.
+    </div>
+
+    <button class="full-btn" onclick="wizPickLogo()">📷 Wgraj swoje logo</button>
+    <div id="wizLogoInfo" style="opacity:.75;font-size:12px;margin:6px 0 10px;">
+      JPG/PNG, najlepiej kwadrat, min. 512×512.
+    </div>
+    <div id="wizLogoPreview" style="margin-bottom:10px;"></div>
+    <input id="wizLogoFile" type="file" accept="image/*" class="hidden">
+
+    <button class="full-btn" onclick="wizPromptText('wizClubName','Podaj nazwę klubu')">🏷️ Podaj nazwę klubu</button>
+    <div id="wizClubNameLabel" style="opacity:.85;margin:6px 0 12px;">—</div>
+
+    <button class="full-btn" onclick="wizPromptMonthYear('wizSeasonStart','Początek sezonu (MM-RRRR)')">📅 Początek sezonu</button>
+    <div id="wizSeasonStartLabel" style="opacity:.85;margin:6px 0 12px;">—</div>
+
+    <button class="full-btn" onclick="wizPromptMonthYear('wizSeasonEnd','Koniec sezonu (MM-RRRR)')">🏁 Koniec sezonu</button>
+    <div id="wizSeasonEndLabel" style="opacity:.85;margin:6px 0 12px;">—</div>
+
+    <button class="full-btn" onclick="wizPickColor()">🎨 Wybierz kolor tła</button>
+    <div id="wizColorLabel" style="opacity:.85;margin:6px 0 12px;display:flex;align-items:center;gap:10px;">
+      <span id="wizColorSwatch" style="width:18px;height:18px;border-radius:6px;border:1px solid #555;display:inline-block;"></span>
+      <span id="wizColorText">—</span>
+    </div>
+
+    <button class="full-btn" onclick="wizPromptText('wizEmail','Twój email')">📩 Twój email</button>
+    <div id="wizEmailLabel" style="opacity:.85;margin:6px 0 12px;">—</div>
+
+    <button class="full-btn" onclick="wizSubmit()">🚀 Wyślij</button>
+    <button class="full-btn alt" onclick="appBack()">⬅ Powrót</button>
+
+    <div id="wizMsg" style="margin-top:10px;opacity:.9;"></div>
+  </div>
+</div>
+
+    
     <!-- LOGOWANIE -->
     <div id="loginView" class="container hidden">
       <img src="https://i.imgur.com/tTBcBSj.jpeg" class="logo" style="width:200px;margin-bottom:20px;">
@@ -372,6 +451,237 @@
 
     // ✅ TU WSTAW SWÓJ NOWY CORE (WebApp /exec)
     const CORE_URL = "https://script.google.com/macros/s/AKfycbwn7Zb9uotc34HNLAsr79r5G5ctr2G2PzIxmZZFyQfeDD2Q8vecZCArQ-ezKVB5TcOexw/exec";
+
+    /* =================== ORGHUB WIZARD =================== */
+
+let wiz = {
+  logoBase64: "",
+  clubName: "",
+  seasonStartMY: "", // "MM-YYYY"
+  seasonEndMY: "",
+  bgColor: "",
+  email: ""
+};
+
+function showBusy(msg) {
+  const ov = document.getElementById("busyOverlay");
+  const m = document.getElementById("busyOverlayMsg");
+  if (m) m.textContent = msg || "Przygotowuję aplikację…";
+  if (ov) ov.classList.remove("hidden");
+}
+function hideBusy() {
+  const ov = document.getElementById("busyOverlay");
+  if (ov) ov.classList.add("hidden");
+}
+function setWizMsg(t) {
+  const el = document.getElementById("wizMsg");
+  if (el) el.textContent = t || "";
+}
+
+function wizPickLogo() {
+  document.getElementById("wizLogoFile").click();
+}
+
+document.addEventListener("change", (e) => {
+  const el = e.target;
+  if (!el || el.id !== "wizLogoFile") return;
+  const file = el.files && el.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = () => {
+    wiz.logoBase64 = String(reader.result || "");
+    const prev = document.getElementById("wizLogoPreview");
+    if (prev) prev.innerHTML = `<img src="${wiz.logoBase64}" style="width:180px;border-radius:16px;border:1px solid #444;">`;
+  };
+  reader.readAsDataURL(file);
+});
+
+function wizPromptText(key, title) {
+  const val = prompt(title, wiz[key] || "");
+  if (val === null) return;
+  wiz[key] = String(val).trim();
+
+  if (key === "wizClubName") {
+    document.getElementById("wizClubNameLabel").textContent = wiz[key] || "—";
+    wiz.clubName = wiz[key];
+  }
+  if (key === "wizEmail") {
+    document.getElementById("wizEmailLabel").textContent = wiz[key] || "—";
+    wiz.email = wiz[key];
+  }
+}
+
+function wizPromptMonthYear(storeKey, title) {
+  // storeKey: "wizSeasonStart" / "wizSeasonEnd" tylko jako identyfikator, wartości trzymamy w wiz.seasonStartMY / seasonEndMY
+  const current = storeKey === "wizSeasonStart" ? wiz.seasonStartMY : wiz.seasonEndMY;
+  const raw = prompt(title, current || "09-2026");
+  if (raw === null) return;
+  const s = String(raw).trim();
+
+  if (!/^\d{2}-\d{4}$/.test(s)) {
+    alert("Wpisz w formacie MM-RRRR, np. 09-2026");
+    return;
+  }
+  const mm = parseInt(s.slice(0,2),10);
+  const yyyy = parseInt(s.slice(3),10);
+  if (mm < 1 || mm > 12 || yyyy < 2000 || yyyy > 2100) {
+    alert("Podaj poprawny miesiąc i rok.");
+    return;
+  }
+
+  if (storeKey === "wizSeasonStart") {
+    wiz.seasonStartMY = s;
+    document.getElementById("wizSeasonStartLabel").textContent = s;
+  } else {
+    wiz.seasonEndMY = s;
+    document.getElementById("wizSeasonEndLabel").textContent = s;
+  }
+}
+
+function wizPickColor() {
+  // proste 4x4 – bez biblioteki
+  const palette = [
+    "#000000","#111111","#1b1b1b","#2a2a2a",
+    "#0b1b2b","#0b2b1b","#2b0b1b","#2b1b0b",
+    "#1a0b2b","#0b2b2b","#2b2b0b","#2b0b2b",
+    "#202a44","#2a4420","#44202a","#444444"
+  ];
+
+  // szybkie okno wyboru: prompt z numerem
+  const idx = prompt(
+    "Wybierz kolor tła (podaj numer 1-16):\n" +
+    palette.map((c,i)=>`${i+1}. ${c}`).join("\n"),
+    "1"
+  );
+  if (idx === null) return;
+  const n = parseInt(idx,10);
+  if (!n || n < 1 || n > 16) { alert("Podaj numer 1-16"); return; }
+
+  wiz.bgColor = palette[n-1];
+  document.getElementById("wizColorSwatch").style.background = wiz.bgColor;
+  document.getElementById("wizColorText").textContent = wiz.bgColor;
+}
+
+function monthYearToDates_(mmYYYY, isStart) {
+  const mm = parseInt(mmYYYY.slice(0,2),10);
+  const yyyy = parseInt(mmYYYY.slice(3),10);
+  if (isStart) {
+    // pierwszy dzień miesiąca
+    return `${yyyy}-${String(mm).padStart(2,"0")}-01`;
+  }
+  // ostatni dzień miesiąca
+  const lastDay = new Date(yyyy, mm, 0).getDate(); // mm=1..12 → w JS monthIndex=mm, day 0 = ostatni dzień poprzedniego miesiąca => działa
+  return `${yyyy}-${String(mm).padStart(2,"0")}-${String(lastDay).padStart(2,"0")}`;
+}
+
+function validateWizard_() {
+  if (!wiz.logoBase64) return "Wgraj logo.";
+  if (!wiz.clubName) return "Podaj nazwę klubu.";
+  if (!wiz.seasonStartMY) return "Podaj początek sezonu (MM-RRRR).";
+  if (!wiz.seasonEndMY) return "Podaj koniec sezonu (MM-RRRR).";
+  if (!wiz.bgColor) return "Wybierz kolor tła.";
+  if (!wiz.email) return "Podaj email.";
+
+  const start = monthYearToDates_(wiz.seasonStartMY, true);
+  const end = monthYearToDates_(wiz.seasonEndMY, false);
+  if (start > end) return "Początek sezonu nie może być po końcu sezonu.";
+
+  return "";
+}
+
+async function wizSubmit() {
+  const err = validateWizard_();
+  if (err) { setWizMsg("❌ " + err); return; }
+
+  const sezonStart = monthYearToDates_(wiz.seasonStartMY, true);
+  const sezonEnd = monthYearToDates_(wiz.seasonEndMY, false);
+
+  setWizMsg("⏳ Wysyłam…");
+  showBusy("Tworzę pliki klubu i konfigurację sezonu…");
+
+  try {
+    // To jest klucz: CORE tworzy klub (folder + 3 pliki + wpis do CONFIG)
+    // i zwraca clubId + theme (logoUrl, bgColor) + ssidy
+    const r = await apiPost({
+      action: "createClub",
+      clubName: wiz.clubName,
+      sezonStart,
+      sezonEnd,
+      bgColor: wiz.bgColor,
+      ownerEmail: wiz.email,
+      logoBase64: wiz.logoBase64
+    });
+
+    if (!r || (r.success !== true && r.ok !== true)) {
+      hideBusy();
+      setWizMsg("❌ " + (r?.error || r?.message || JSON.stringify(r)));
+      return;
+    }
+
+    // CORE zwraca: clubId + logoUrl + bgColor (albo theme)
+    const newClubId = r.clubId;
+    if (!newClubId) {
+      hideBusy();
+      setWizMsg("❌ CORE nie zwrócił clubId.");
+      return;
+    }
+
+    // zapisz lokalnie i ustaw globalnie
+    clubId = newClubId;
+    localStorage.setItem("orghub_clubId", clubId);
+
+    const theme = {
+      bgColor: r.bgColor || wiz.bgColor,
+      logoUrl: r.logoUrl || "",
+      clubName: r.clubName || wiz.clubName
+    };
+    localStorage.setItem("orghub_theme", JSON.stringify(theme));
+
+    applyTheme_(theme);
+
+    hideBusy();
+    setWizMsg("✅ Gotowe. Przechodzę do logowania…");
+
+    // przejście do logowania (Twoja istniejąca logika)
+    setTimeout(() => {
+      goToView("loginView", { replace:true });
+    }, 400);
+
+  } catch (e) {
+    hideBusy();
+    setWizMsg("❌ Błąd połączenia: " + (e?.message || e));
+  }
+}
+
+function applyTheme_(theme) {
+  try {
+    if (theme?.bgColor) document.body.style.backgroundColor = theme.bgColor;
+    // podmień logo na loginView
+    const logoImg = document.querySelector("#loginView img.logo") || document.querySelector("#loginView img");
+    if (logoImg && theme?.logoUrl) logoImg.src = theme.logoUrl;
+    // tytuł klubu w loginView (jeśli chcesz dodać)
+  } catch {}
+}
+
+/* =================== START ROUTER =================== */
+function bootstrapOrgHub_() {
+  // jeżeli mamy zapisany clubId → normalny start
+  const saved = localStorage.getItem("orghub_clubId");
+  const t = localStorage.getItem("orghub_theme");
+  if (t) {
+    try { applyTheme_(JSON.parse(t)); } catch {}
+  }
+
+  if (!saved) {
+    goToView("orgHubStartView", { replace:true });
+    return;
+  }
+
+  clubId = saved;
+  goToView("loginView", { replace:true });
+}
+
 
     let clubId = localStorage.getItem("clubId") || "";
     let numerZalogowanego = null;
