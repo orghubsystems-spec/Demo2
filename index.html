@@ -177,7 +177,7 @@
   </style>
 
   <script>
-    const WERSJA_APKI = 'ORG_HUB_APP';
+    const WERSJA_APKI = '1.02.02';
     const poprzednia = localStorage.getItem('wersjaApki');
     if (poprzednia !== WERSJA_APKI) {
       localStorage.setItem('wersjaApki', WERSJA_APKI);
@@ -215,19 +215,58 @@
   <!-- Główna aplikacja -->
   <div id="app" class="hidden">
 
-    <!-- WYBÓR KLUBU -->
-    <div id="clubSetupView" class="container hidden">
-      <h1>Wybór klubu</h1>
-      <div class="login-box">
-        <input id="clubIdInput" type="text" placeholder="clubId (np. klub_testowy_core)">
-        <button class="full-btn" onclick="zapiszClubId()">Zapisz</button>
-        <button class="full-btn alt" onclick="wyczyscClubId()">Wyczyść</button>
+   <!-- LANDING ORGHUB -->
+<div id="orgHubLandingView" class="container hidden">
+  <h1 style="margin-bottom:8px;">ORGHUB SYSTEMS</h1>
+  <p style="opacity:0.8;margin-top:0;">Panel startowy</p>
+  <button class="full-btn" onclick="goToConfig()">Skonfiguruj klub</button>
+</div>
+
+<!-- KONFIGURACJA KLUBU -->
+<div id="clubConfigView" class="container hidden">
+  <h1>Konfiguracja klubu</h1>
+
+  <div class="card" style="max-width:320px;margin:12px auto;">
+    <!-- LOGO -->
+    <button class="full-btn" onclick="pickLogo()">Wgraj swoje logo</button>
+    <div style="margin-top:8px;">
+      <img id="cfgLogoPreview" src="" alt="" style="display:none;width:160px;border-radius:10px;border:1px solid #444;">
+      <div style="font-size:12px;opacity:0.75;margin-top:6px;">
+        PNG/JPG, najlepiej kwadrat, np. 512×512
       </div>
-      <p id="clubSetupMsg"></p>
-      <p style="opacity:.7;font-size:.9rem;margin-top:20px;">
-        Tip: clubId zapisuje się w telefonie/kompie (localStorage).
-      </p>
+      <input id="cfgLogoInput" type="file" accept="image/*" class="hidden" />
     </div>
+
+    <!-- NAZWA -->
+    <button class="full-btn alt" onclick="editClubName()">Podaj nazwę klubu</button>
+    <div id="cfgClubNameLabel" style="margin-top:6px;opacity:0.9;"></div>
+
+    <!-- SEZON START -->
+    <button class="full-btn alt" onclick="editSeasonStart()">Początek sezonu</button>
+    <div id="cfgSeasonStartLabel" style="margin-top:6px;opacity:0.9;"></div>
+
+    <!-- SEZON END -->
+    <button class="full-btn alt" onclick="editSeasonEnd()">Koniec sezonu</button>
+    <div id="cfgSeasonEndLabel" style="margin-top:6px;opacity:0.9;"></div>
+
+    <!-- KOLOR TŁA -->
+    <button class="full-btn alt" onclick="toggleColorPicker(true)">Wybierz kolor tła</button>
+    <div id="cfgColorLabel" style="margin-top:6px;opacity:0.9;"></div>
+
+    <div id="cfgColorGrid" class="hidden" style="margin-top:10px;display:grid;grid-template-columns:repeat(4, 1fr);gap:8px;">
+      <!-- kolory wypełnimy z JS -->
+    </div>
+
+    <!-- EMAIL -->
+    <button class="full-btn alt" onclick="editEmail()">Twój email</button>
+    <div id="cfgEmailLabel" style="margin-top:6px;opacity:0.9;"></div>
+
+    <button class="full-btn" style="margin-top:14px;" onclick="submitClubConfig()">Wyślij</button>
+    <button class="full-btn alt" onclick="goBackFromConfig()">⬅ Powrót</button>
+
+    <p id="cfgMsg" style="margin-top:10px;"></p>
+  </div>
+</div>
 
 <!-- START / ORGHUB -->
 <div id="orgHubStartView" class="container hidden">
@@ -435,6 +474,17 @@
     </div>
   </div><!-- /app -->
 
+  <!-- BUSY OVERLAY -->
+<div id="busyOverlay" class="hidden" style="
+  position:fixed; inset:0; background:rgba(0,0,0,0.75);
+  display:flex; align-items:center; justify-content:center;
+  z-index:5000;">
+  <div class="card" style="max-width:280px;text-align:center;">
+    <div style="font-size:18px;margin-bottom:8px;">⏳ Przygotowuję aplikację…</div>
+    <div id="busyText" style="opacity:0.85;font-size:13px;">Tworzę pliki i ustawienia klubu.</div>
+  </div>
+</div>
+
   <script>
     /* =================== START / INTRO =================== */
     function odtworzIntroSound() {
@@ -451,6 +501,35 @@
 
     // ✅ TU WSTAW SWÓJ NOWY CORE (WebApp /exec)
     const CORE_URL = "https://script.google.com/macros/s/AKfycbwn7Zb9uotc34HNLAsr79r5G5ctr2G2PzIxmZZFyQfeDD2Q8vecZCArQ-ezKVB5TcOexw/exec";
+
+    /* =================== ORGHUB – KONFIG LOKALNA =================== */
+
+const LS_KEY = "orghub.clubConfig.v1";
+
+function loadLocalClubConfig() {
+  try { return JSON.parse(localStorage.getItem(LS_KEY) || "null"); }
+  catch { return null; }
+}
+
+function saveLocalClubConfig(cfg) {
+  localStorage.setItem(LS_KEY, JSON.stringify(cfg));
+}
+
+function clearLocalClubConfig() {
+  localStorage.removeItem(LS_KEY);
+}
+
+function showBusy(text) {
+  const ov = document.getElementById("busyOverlay");
+  const bt = document.getElementById("busyText");
+  if (bt && text) bt.textContent = text;
+  ov.classList.remove("hidden");
+}
+
+function hideBusy() {
+  document.getElementById("busyOverlay").classList.add("hidden");
+}
+
 
     /* =================== ORGHUB WIZARD =================== */
 
@@ -768,6 +847,30 @@ function bootstrapOrgHub_() {
       }, 5000);
     });
 
+    function initStartView_() {
+  const cfg = loadLocalClubConfig();
+
+  // Jeśli nie ma configu → landing ORGHUB
+  if (!cfg || !cfg.clubId) {
+    goToView("orgHubLandingView", { replace: true });
+    return;
+  }
+
+  // Jeśli config jest → ustaw branding i idź do logowania
+  applyBranding_(cfg);
+  goToView("loginView", { replace: true });
+}
+
+function applyBranding_(cfg) {
+  // tło
+  if (cfg.bgColor) document.body.style.backgroundColor = cfg.bgColor;
+
+  // logo na logowaniu (podmień img na loginie)
+  const logoImg = document.querySelector("#loginView img.logo");
+  if (logoImg && cfg.logoDataUrl) logoImg.src = cfg.logoDataUrl;
+}
+
+
     /* =================== WYBÓR KLUBU =================== */
     function pokazClubSetup(replace = false) {
       goToView("clubSetupView", { replace });
@@ -812,6 +915,30 @@ function bootstrapOrgHub_() {
     function pokazRejestracjaSelect() { goToView("registerSelectView"); }
     function pokazRejestracjaZawodnik() { goToView("registerZawodnikView"); }
     function pokazRejestracjaTrener() { goToView("rejestracjaTrenerView"); }
+
+    function goToLanding() {
+  goToView("orgHubLandingView");
+}
+
+function goToConfig() {
+  goToView("clubConfigView");
+}
+
+function submitClubConfig() {
+  const clubName = document.getElementById("cfgClubName").value.trim();
+  const sezonStart = document.getElementById("cfgSeasonStart").value.trim();
+  const sezonEnd = document.getElementById("cfgSeasonEnd").value.trim();
+  const email = document.getElementById("cfgEmail").value.trim();
+  const msg = document.getElementById("cfgMsg");
+
+  if (!clubName) return msg.innerText = "❌ Podaj nazwę klubu.";
+  if (!/^\d{4}-\d{2}$/.test(sezonStart)) return msg.innerText = "❌ Początek sezonu ma być RRRR-MM, np. 2026-09";
+  if (!/^\d{4}-\d{2}$/.test(sezonEnd)) return msg.innerText = "❌ Koniec sezonu ma być RRRR-MM, np. 2027-04";
+  if (!email) return msg.innerText = "❌ Podaj email admina.";
+
+  msg.innerText = `✅ Zapisane lokalnie (na razie tylko test UI): ${clubName}, ${sezonStart} → ${sezonEnd}, ${email}`;
+}
+
 
     /* =================== LOGOWANIE =================== */
     async function zaloguj() {
@@ -1308,6 +1435,149 @@ function bootstrapOrgHub_() {
         }
       }
     }
+    /* =================== ORGHUB – KONFIG UI =================== */
+
+let cfgDraft = {
+  clubName: "",
+  email: "",
+  sezonStart: "", // YYYY-MM-01
+  sezonEnd: "",   // YYYY-MM-30 (umownie)
+  bgColor: "#000000",
+  logoDataUrl: ""
+};
+
+const COLOR_PRESETS = [
+  "#000000","#111111","#1b1b1b","#2a2a2a",
+  "#0b1220","#0f1a2b","#132235","#1a2f4a",
+  "#1a0f1f","#2a1232","#3a1444","#4a1757",
+  "#102015","#15301f","#1a4028","#205232"
+];
+
+function goToConfig() {
+  // jeśli istnieje zapisany config → wczytaj do draftu (edycja)
+  const saved = loadLocalClubConfig();
+  if (saved) cfgDraft = { ...cfgDraft, ...saved };
+
+  renderConfigUI_();
+  goToView("clubConfigView");
+}
+
+function goBackFromConfig() {
+  const saved = loadLocalClubConfig();
+  if (saved && saved.clubId) goToView("loginView");
+  else goToView("orgHubLandingView");
+}
+
+function renderConfigUI_() {
+  const nameEl = document.getElementById("cfgClubNameLabel");
+  const ssEl = document.getElementById("cfgSeasonStartLabel");
+  const seEl = document.getElementById("cfgSeasonEndLabel");
+  const emEl = document.getElementById("cfgEmailLabel");
+  const colEl = document.getElementById("cfgColorLabel");
+  const prev = document.getElementById("cfgLogoPreview");
+
+  nameEl.textContent = cfgDraft.clubName ? `✅ ${cfgDraft.clubName}` : "— nie ustawiono";
+  ssEl.textContent = cfgDraft.sezonStart ? `✅ ${cfgDraft.sezonStart}` : "— nie ustawiono";
+  seEl.textContent = cfgDraft.sezonEnd ? `✅ ${cfgDraft.sezonEnd}` : "— nie ustawiono";
+  emEl.textContent = cfgDraft.email ? `✅ ${cfgDraft.email}` : "— nie ustawiono";
+  colEl.textContent = cfgDraft.bgColor ? `✅ ${cfgDraft.bgColor}` : "— nie ustawiono";
+
+  if (cfgDraft.logoDataUrl) {
+    prev.src = cfgDraft.logoDataUrl;
+    prev.style.display = "inline-block";
+  } else {
+    prev.style.display = "none";
+  }
+
+  // siatka kolorów
+  const grid = document.getElementById("cfgColorGrid");
+  grid.innerHTML = COLOR_PRESETS.map(c => `
+    <div onclick="setBgColor('${c}')" style="
+      width:100%; aspect-ratio:1/1; border-radius:10px;
+      border:1px solid #444; background:${c}; cursor:pointer;">
+    </div>
+  `).join("");
+}
+
+function toggleColorPicker(show) {
+  const grid = document.getElementById("cfgColorGrid");
+  if (show) grid.classList.remove("hidden");
+  else grid.classList.add("hidden");
+}
+
+function setBgColor(color) {
+  cfgDraft.bgColor = color;
+  document.body.style.backgroundColor = color;
+  document.getElementById("cfgColorLabel").textContent = `✅ ${color}`;
+}
+
+function pickLogo() {
+  const input = document.getElementById("cfgLogoInput");
+  input.onchange = async () => {
+    const file = input.files && input.files[0];
+    if (!file) return;
+
+    // szybka walidacja
+    if (file.size > 2 * 1024 * 1024) {
+      document.getElementById("cfgMsg").textContent = "❌ Logo za duże (max ~2MB).";
+      return;
+    }
+
+    const dataUrl = await fileToDataUrl_(file);
+    cfgDraft.logoDataUrl = dataUrl;
+    renderConfigUI_();
+  };
+  input.click();
+}
+
+function fileToDataUrl_(file) {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(String(r.result || ""));
+    r.onerror = reject;
+    r.readAsDataURL(file);
+  });
+}
+
+function editClubName() {
+  const v = prompt("Podaj nazwę klubu:", cfgDraft.clubName || "");
+  if (v === null) return;
+  cfgDraft.clubName = v.trim();
+  renderConfigUI_();
+}
+
+function editEmail() {
+  const v = prompt("Podaj email admina:", cfgDraft.email || "");
+  if (v === null) return;
+  cfgDraft.email = v.trim();
+  renderConfigUI_();
+}
+
+function editSeasonStart() {
+  const v = prompt("Początek sezonu (RRRR-MM), np. 2026-09:", cfgDraft.sezonStart ? cfgDraft.sezonStart.slice(0,7) : "");
+  if (v === null) return;
+  const m = String(v).trim();
+  if (!/^\d{4}-\d{2}$/.test(m)) {
+    document.getElementById("cfgMsg").textContent = "❌ Zły format. Użyj RRRR-MM.";
+    return;
+  }
+  cfgDraft.sezonStart = `${m}-01`;
+  renderConfigUI_();
+}
+
+function editSeasonEnd() {
+  const v = prompt("Koniec sezonu (RRRR-MM), np. 2027-04:", cfgDraft.sezonEnd ? cfgDraft.sezonEnd.slice(0,7) : "");
+  if (v === null) return;
+  const m = String(v).trim();
+  if (!/^\d{4}-\d{2}$/.test(m)) {
+    document.getElementById("cfgMsg").textContent = "❌ Zły format. Użyj RRRR-MM.";
+    return;
+  }
+  // Umownie kończymy na -30 (backend może to skorygować)
+  cfgDraft.sezonEnd = `${m}-30`;
+  renderConfigUI_();
+}
+
   </script>
 </body>
 </html>
