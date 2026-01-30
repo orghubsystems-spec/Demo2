@@ -181,7 +181,7 @@
   </style>
 
   <script>
-    const WERSJA_APKI = '1.07.02';
+    const WERSJA_APKI = '1.08.02';
     const poprzednia = localStorage.getItem('wersjaApki');
     if (poprzednia !== WERSJA_APKI) {
       localStorage.setItem('wersjaApki', WERSJA_APKI);
@@ -679,20 +679,6 @@
     
   </style>
 
-  <script>
-    const WERSJA_APKI = '1.08.02';
-    const poprzednia = localStorage.getItem('wersjaApki');
-    if (poprzednia !== WERSJA_APKI) {
-      localStorage.setItem('wersjaApki', WERSJA_APKI);
-      location.reload(true);
-    }
-
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('service-worker.js')
-        .then(r => console.log("✅ SW zarejestrowany:", r))
-        .catch(e => console.error("❌ Błąd SW:", e));
-    }
-  </script>
 </head>
 
 <body>
