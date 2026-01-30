@@ -181,7 +181,7 @@
   </style>
 
   <script>
-    const WERSJA_APKI = '1.04.02';
+    const WERSJA_APKI = '1.05.02';
     const poprzednia = localStorage.getItem('wersjaApki');
     if (poprzednia !== WERSJA_APKI) {
       localStorage.setItem('wersjaApki', WERSJA_APKI);
@@ -263,7 +263,8 @@
     <button class="full-btn alt" onclick="toggleColorPicker(true)">Wybierz kolor tła</button>
     <div id="cfgColorLabel" style="margin-top:6px;opacity:0.9;"></div>
 
-    <div id="cfgColorGrid" class="hidden" style="margin-top:10px;display:grid;grid-template-columns:repeat(4, 1fr);gap:8px;">
+    <div id="cfgColorGrid" class="hidden" 
+          style="margin-top:10px;display:grid;grid-template-columns:repeat(4, 1fr);gap:8px;">
       <!-- kolory wypełnimy z JS -->
     </div>
 
@@ -1680,7 +1681,10 @@ function pickColor_(hex, name) {
   // podgląd natychmiast
   document.body.style.backgroundColor = hex;
 }
-   
+
+      // zamknij siatkę
+  toggleColorPicker(false);
+}
   </script>
 </body>
 </html>
