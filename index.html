@@ -680,7 +680,7 @@
   </style>
 
   <script>
-    const WERSJA_APKI = '1.06.02';
+    const WERSJA_APKI = '1.07.02';
     const poprzednia = localStorage.getItem('wersjaApki');
     if (poprzednia !== WERSJA_APKI) {
       localStorage.setItem('wersjaApki', WERSJA_APKI);
@@ -1011,6 +1011,19 @@
 
     // ✅ TU WSTAW SWÓJ NOWY CORE (WebApp /exec)
     const CORE_URL = "https://script.google.com/macros/s/AKfycbwn7Zb9uotc34HNLAsr79r5G5ctr2G2PzIxmZZFyQfeDD2Q8vecZCArQ-ezKVB5TcOexw/exec";
+
+    window.onerror = function (msg, src, line, col, err) {
+  try {
+    document.body.innerHTML = `
+      <div style="padding:16px;color:#fff;background:#000;font-family:sans-serif;">
+        <h2>❌ Błąd w index.html</h2>
+        <div style="opacity:.8;margin-top:8px;">${msg}</div>
+        <div style="opacity:.6;margin-top:8px;font-size:12px;">${src || ""}:${line || ""}:${col || ""}</div>
+        <pre style="white-space:pre-wrap;opacity:.75;margin-top:12px;">${(err && err.stack) ? err.stack : ""}</pre>
+      </div>`;
+  } catch {}
+};
+
 
     /* =================== ORGHUB – KONFIG LOKALNA =================== */
 
