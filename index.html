@@ -177,7 +177,7 @@
   </style>
 
   <script>
-    const WERSJA_APKI = '1.02.02';
+    const WERSJA_APKI = '1.03.02';
     const poprzednia = localStorage.getItem('wersjaApki');
     if (poprzednia !== WERSJA_APKI) {
       localStorage.setItem('wersjaApki', WERSJA_APKI);
@@ -828,7 +828,7 @@ function bootstrapOrgHub_() {
     window.addEventListener("popstate", (event) => {
       const state = event.state;
       if (state && state.view) showViewFromHistory(state.view);
-      else showViewFromHistory(clubId ? "loginView" : "clubSetupView");
+      else showViewFromHistory(clubId ? "loginView" : "orgHubLandingView");
     });
 
     window.addEventListener('load', () => {
@@ -839,11 +839,11 @@ function bootstrapOrgHub_() {
         document.getElementById("wersjaNum").textContent = WERSJA_APKI;
 
         try {
-          history.replaceState({ view: clubId ? "loginView" : "clubSetupView" }, "", "");
+          history.replaceState({ view: clubId ? "loginView" : "orgHubLandingView" }, "", "");
         } catch (e) {}
 
         refreshClubBadge_();
-        showViewFromHistory(clubId ? "loginView" : "clubSetupView");
+        showViewFromHistory(clubId ? "loginView" : "orgHubLandingView");
       }, 5000);
     });
 
