@@ -181,7 +181,7 @@
   </style>
 
   <script>
-    const WERSJA_APKI = '1.09.02';
+    const WERSJA_APKI = '1.02.03.01';
     const poprzednia = localStorage.getItem('wersjaApki');
     if (poprzednia !== WERSJA_APKI) {
       localStorage.setItem('wersjaApki', WERSJA_APKI);
@@ -995,1021 +995,175 @@
   </div>
 </div>
 
-  <script>
-    /* =================== START / INTRO =================== */
-    function odtworzIntroSound() {
-      try {
-        const audio = new Audio("sound.mp3");
-        audio.volume = 0.7;
-        audio.play().catch(e => console.warn("Nie można odtworzyć dźwięku:", e));
-      } catch (err) {
-        console.error("Błąd dźwięku:", err);
-      }
-    }
-
-    /* =================== KONFIG / GLOBALNE =================== */
-
-    // ✅ TU WSTAW SWÓJ NOWY CORE (WebApp /exec)
-    const CORE_URL = "https://script.google.com/macros/s/AKfycbwn7Zb9uotc34HNLAsr79r5G5ctr2G2PzIxmZZFyQfeDD2Q8vecZCArQ-ezKVB5TcOexw/exec";
-
-    window.onerror = function (msg, src, line, col, err) {
+<script>
+/* =================== 00 START / INTRO =================== */
+function odtworzIntroSound() {
   try {
-    document.body.innerHTML = `
-      <div style="padding:16px;color:#fff;background:#000;font-family:sans-serif;">
-        <h2>❌ Błąd w index.html</h2>
-        <div style="opacity:.8;margin-top:8px;">${msg}</div>
-        <div style="opacity:.6;margin-top:8px;font-size:12px;">${src || ""}:${line || ""}:${col || ""}</div>
-        <pre style="white-space:pre-wrap;opacity:.75;margin-top:12px;">${(err && err.stack) ? err.stack : ""}</pre>
-      </div>`;
-  } catch {}
-};
+    const audio = new Audio("sound.mp3");
+    audio.volume = 0.7;
+    audio.play().catch(() => {});
+  } catch (err) {}
+}
 
+/* =================== 10 KONFIG / GLOBALNE =================== */
+const WERSJA_APKI = window.WERSJA_APKI || "ORGHUB APP";
+const CORE_URL = "https://script.google.com/macros/s/AKfycbwn7Zb9uotc34HNLAsr79r5G5ctr2G2PzIxmZZFyQfeDD2Q8vecZCArQ-ezKVB5TcOexw/exec";
 
-    /* =================== ORGHUB – KONFIG LOKALNA =================== */
+// stan aplikacji
+let clubId = localStorage.getItem("orghub_clubId") || "";
+let numerZalogowanego = null;
+let grupaZalogowanego = null;
+window.grupyTrenera = "";
+let currentView = "loginView";
 
-const LS_KEY = "orghub.clubConfig.v1";
+/* =================== 20 PAMIĘĆ LOKALNA (localStorage) =================== */
+const LS_KEY_CFG = "orghub.clubConfig.v1";
+const LS_KEY_CLUBID = "orghub_clubId";
+const LS_KEY_THEME = "orghub_theme";
 
 function loadLocalClubConfig() {
-  try { return JSON.parse(localStorage.getItem(LS_KEY) || "null"); }
+  try { return JSON.parse(localStorage.getItem(LS_KEY_CFG) || "null"); }
+  catch { return null; }
+}
+function saveLocalClubConfig(cfg) {
+  localStorage.setItem(LS_KEY_CFG, JSON.stringify(cfg || {}));
+}
+function clearLocalClubConfig() {
+  localStorage.removeItem(LS_KEY_CFG);
+}
+function saveClubId_(id) {
+  clubId = String(id || "").trim();
+  if (clubId) localStorage.setItem(LS_KEY_CLUBID, clubId);
+  else localStorage.removeItem(LS_KEY_CLUBID);
+}
+function saveTheme_(theme) {
+  localStorage.setItem(LS_KEY_THEME, JSON.stringify(theme || {}));
+}
+function loadTheme_() {
+  try { return JSON.parse(localStorage.getItem(LS_KEY_THEME) || "null"); }
   catch { return null; }
 }
 
-function saveLocalClubConfig(cfg) {
-  localStorage.setItem(LS_KEY, JSON.stringify(cfg));
-}
-
-function clearLocalClubConfig() {
-  localStorage.removeItem(LS_KEY);
-}
-
+/* =================== 30 BUSY OVERLAY =================== */
 function showBusy(text) {
   const ov = document.getElementById("busyOverlay");
   const bt = document.getElementById("busyText");
   if (bt && text) bt.textContent = text;
-  ov.classList.remove("hidden");
-}
-
-function hideBusy() {
-  document.getElementById("busyOverlay").classList.add("hidden");
-}
-
-
-    /* =================== ORGHUB WIZARD =================== */
-
-let wiz = {
-  logoBase64: "",
-  clubName: "",
-  seasonStartMY: "", // "MM-YYYY"
-  seasonEndMY: "",
-  bgColor: "",
-  email: ""
-};
-
-function showBusy(msg) {
-  const ov = document.getElementById("busyOverlay");
-  const m = document.getElementById("busyOverlayMsg");
-  if (m) m.textContent = msg || "Przygotowuję aplikację…";
   if (ov) ov.classList.remove("hidden");
 }
 function hideBusy() {
   const ov = document.getElementById("busyOverlay");
   if (ov) ov.classList.add("hidden");
 }
-function setWizMsg(t) {
-  const el = document.getElementById("wizMsg");
-  if (el) el.textContent = t || "";
+
+/* =================== 40 NAWIGACJA / ROUTER =================== */
+function ukryjWszystkie() {
+  document.querySelectorAll(".container").forEach(v => v.classList.add("hidden"));
 }
 
-function wizPickLogo() {
-  document.getElementById("wizLogoFile").click();
+function goToView(viewId, options = {}) {
+  const { replace = false } = options;
+  ukryjWszystkie();
+  const el = document.getElementById(viewId);
+  if (el) el.classList.remove("hidden");
+  currentView = viewId;
+
+  const state = { view: viewId };
+  try {
+    if (replace) history.replaceState(state, "", "");
+    else history.pushState(state, "", "");
+  } catch (e) {}
 }
 
-document.addEventListener("change", (e) => {
-  const el = e.target;
-  if (!el || el.id !== "wizLogoFile") return;
-  const file = el.files && el.files[0];
-  if (!file) return;
+function showViewFromHistory(viewId) {
+  ukryjWszystkie();
+  const el = document.getElementById(viewId);
+  if (el) el.classList.remove("hidden");
+  currentView = viewId;
+}
 
-  const reader = new FileReader();
-  reader.onload = () => {
-    wiz.logoBase64 = String(reader.result || "");
-    const prev = document.getElementById("wizLogoPreview");
-    if (prev) prev.innerHTML = `<img src="${wiz.logoBase64}" style="width:180px;border-radius:16px;border:1px solid #444;">`;
-  };
-  reader.readAsDataURL(file);
+function appBack() { history.back(); }
+
+window.addEventListener("popstate", (event) => {
+  const state = event.state;
+  if (state && state.view) showViewFromHistory(state.view);
+  else showViewFromHistory(clubId ? "loginView" : "orgHubLandingView");
 });
 
-function wizPromptText(key, title) {
-  const val = prompt(title, wiz[key] || "");
-  if (val === null) return;
-  wiz[key] = String(val).trim();
-
-  if (key === "wizClubName") {
-    document.getElementById("wizClubNameLabel").textContent = wiz[key] || "—";
-    wiz.clubName = wiz[key];
-  }
-  if (key === "wizEmail") {
-    document.getElementById("wizEmailLabel").textContent = wiz[key] || "—";
-    wiz.email = wiz[key];
-  }
-}
-
-function wizPromptMonthYear(storeKey, title) {
-  // storeKey: "wizSeasonStart" / "wizSeasonEnd" tylko jako identyfikator, wartości trzymamy w wiz.seasonStartMY / seasonEndMY
-  const current = storeKey === "wizSeasonStart" ? wiz.seasonStartMY : wiz.seasonEndMY;
-  const raw = prompt(title, current || "09-2026");
-  if (raw === null) return;
-  const s = String(raw).trim();
-
-  if (!/^\d{2}-\d{4}$/.test(s)) {
-    alert("Wpisz w formacie MM-RRRR, np. 09-2026");
-    return;
-  }
-  const mm = parseInt(s.slice(0,2),10);
-  const yyyy = parseInt(s.slice(3),10);
-  if (mm < 1 || mm > 12 || yyyy < 2000 || yyyy > 2100) {
-    alert("Podaj poprawny miesiąc i rok.");
-    return;
-  }
-
-  if (storeKey === "wizSeasonStart") {
-    wiz.seasonStartMY = s;
-    document.getElementById("wizSeasonStartLabel").textContent = s;
-  } else {
-    wiz.seasonEndMY = s;
-    document.getElementById("wizSeasonEndLabel").textContent = s;
-  }
-}
-
-function wizPickColor() {
-  // proste 4x4 – bez biblioteki
-  const palette = [
-    "#000000","#111111","#1b1b1b","#2a2a2a",
-    "#0b1b2b","#0b2b1b","#2b0b1b","#2b1b0b",
-    "#1a0b2b","#0b2b2b","#2b2b0b","#2b0b2b",
-    "#202a44","#2a4420","#44202a","#444444"
-  ];
-
-  // szybkie okno wyboru: prompt z numerem
-  const idx = prompt(
-    "Wybierz kolor tła (podaj numer 1-16):\n" +
-    palette.map((c,i)=>`${i+1}. ${c}`).join("\n"),
-    "1"
-  );
-  if (idx === null) return;
-  const n = parseInt(idx,10);
-  if (!n || n < 1 || n > 16) { alert("Podaj numer 1-16"); return; }
-
-  wiz.bgColor = palette[n-1];
-  document.getElementById("wizColorSwatch").style.background = wiz.bgColor;
-  document.getElementById("wizColorText").textContent = wiz.bgColor;
-}
-
-function monthYearToDates_(mmYYYY, isStart) {
-  const mm = parseInt(mmYYYY.slice(0,2),10);
-  const yyyy = parseInt(mmYYYY.slice(3),10);
-  if (isStart) {
-    // pierwszy dzień miesiąca
-    return `${yyyy}-${String(mm).padStart(2,"0")}-01`;
-  }
-  // ostatni dzień miesiąca
-  const lastDay = new Date(yyyy, mm, 0).getDate(); // mm=1..12 → w JS monthIndex=mm, day 0 = ostatni dzień poprzedniego miesiąca => działa
-  return `${yyyy}-${String(mm).padStart(2,"0")}-${String(lastDay).padStart(2,"0")}`;
-}
-
-function validateWizard_() {
-  if (!wiz.logoBase64) return "Wgraj logo.";
-  if (!wiz.clubName) return "Podaj nazwę klubu.";
-  if (!wiz.seasonStartMY) return "Podaj początek sezonu (MM-RRRR).";
-  if (!wiz.seasonEndMY) return "Podaj koniec sezonu (MM-RRRR).";
-  if (!wiz.bgColor) return "Wybierz kolor tła.";
-  if (!wiz.email) return "Podaj email.";
-
-  const start = monthYearToDates_(wiz.seasonStartMY, true);
-  const end = monthYearToDates_(wiz.seasonEndMY, false);
-  if (start > end) return "Początek sezonu nie może być po końcu sezonu.";
-
-  return "";
-}
-
-async function wizSubmit() {
-  const err = validateWizard_();
-  if (err) { setWizMsg("❌ " + err); return; }
-
-  const sezonStart = monthYearToDates_(wiz.seasonStartMY, true);
-  const sezonEnd = monthYearToDates_(wiz.seasonEndMY, false);
-
-  setWizMsg("⏳ Wysyłam…");
-  showBusy("Tworzę pliki klubu i konfigurację sezonu…");
-
-  try {
-    // To jest klucz: CORE tworzy klub (folder + 3 pliki + wpis do CONFIG)
-    // i zwraca clubId + theme (logoUrl, bgColor) + ssidy
-    const r = await apiPost({
-      action: "createClub",
-      clubName: wiz.clubName,
-      sezonStart,
-      sezonEnd,
-      bgColor: wiz.bgColor,
-      ownerEmail: wiz.email,
-      logoBase64: wiz.logoBase64
-    });
-
-    if (!r || (r.success !== true && r.ok !== true)) {
-      hideBusy();
-      setWizMsg("❌ " + (r?.error || r?.message || JSON.stringify(r)));
-      return;
-    }
-
-    // CORE zwraca: clubId + logoUrl + bgColor (albo theme)
-    const newClubId = r.clubId;
-    if (!newClubId) {
-      hideBusy();
-      setWizMsg("❌ CORE nie zwrócił clubId.");
-      return;
-    }
-
-    // zapisz lokalnie i ustaw globalnie
-    clubId = newClubId;
-    localStorage.setItem("orghub_clubId", clubId);
-
-    const theme = {
-      bgColor: r.bgColor || wiz.bgColor,
-      logoUrl: r.logoUrl || "",
-      clubName: r.clubName || wiz.clubName
-    };
-    localStorage.setItem("orghub_theme", JSON.stringify(theme));
-
-    applyTheme_(theme);
-
-    hideBusy();
-    setWizMsg("✅ Gotowe. Przechodzę do logowania…");
-
-    // przejście do logowania (Twoja istniejąca logika)
-    setTimeout(() => {
-      goToView("loginView", { replace:true });
-    }, 400);
-
-  } catch (e) {
-    hideBusy();
-    setWizMsg("❌ Błąd połączenia: " + (e?.message || e));
-  }
+function refreshClubBadge_() {
+  const el = document.getElementById("clubIdBadge");
+  if (el) el.textContent = clubId || "—";
 }
 
 function applyTheme_(theme) {
   try {
     if (theme?.bgColor) document.body.style.backgroundColor = theme.bgColor;
-    // podmień logo na loginView
+
     const logoImg = document.querySelector("#loginView img.logo") || document.querySelector("#loginView img");
     if (logoImg && theme?.logoUrl) logoImg.src = theme.logoUrl;
-    // tytuł klubu w loginView (jeśli chcesz dodać)
-  } catch {}
+
+  } catch (e) {}
 }
 
-/* =================== START ROUTER =================== */
-function bootstrapOrgHub_() {
-  // jeżeli mamy zapisany clubId → normalny start
-  const saved = localStorage.getItem("orghub_clubId");
-  const t = localStorage.getItem("orghub_theme");
-  if (t) {
-    try { applyTheme_(JSON.parse(t)); } catch {}
-  }
+function startApp_() {
+  // zastosuj theme jeśli jest
+  const t = loadTheme_();
+  if (t) applyTheme_(t);
 
-  if (!saved) {
-    goToView("orgHubStartView", { replace:true });
-    return;
-  }
-
-  clubId = saved;
-  goToView("loginView", { replace:true });
+  refreshClubBadge_();
+  goToView(clubId ? "loginView" : "orgHubLandingView", { replace: true });
 }
 
-
-    let clubId = localStorage.getItem("clubId") || "";
-    let numerZalogowanego = null;
-    let grupaZalogowanego = null;
-    window.grupyTrenera = "";
-    let currentView = "loginView";
-
-    function refreshClubBadge_() {
-      const el = document.getElementById("clubIdBadge");
-      if (el) el.textContent = clubId || "—";
-    }
-
-    function requireClubId() {
-      if (!clubId) throw new Error("Brak clubId. Ustaw clubId w 'Wybór klubu'.");
-    }
-
-    async function apiGet(action, params = {}) {
-      requireClubId();
-      const url = new URL(CORE_URL);
-      url.searchParams.set("action", action);
-      url.searchParams.set("clubId", clubId);
-      Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v ?? ""));
-      const res = await fetch(url.toString(), { cache: "no-store" });
-      return res.json();
-    }
-
-    async function apiPost(payload = {}) {
-      requireClubId();
-      const body = new URLSearchParams({ clubId, ...payload });
-      const res = await fetch(CORE_URL, { method: "POST", body });
-      return res.json();
-    }
-
-    function ukryjWszystkie() {
-      document.querySelectorAll(".container").forEach(v => v.classList.add("hidden"));
-    }
-
-    function goToView(viewId, options = {}) {
-      const { replace = false } = options;
-      ukryjWszystkie();
-      const el = document.getElementById(viewId);
-      if (el) el.classList.remove("hidden");
-      currentView = viewId;
-      const state = { view: viewId };
-
-      try {
-        if (replace) history.replaceState(state, "", "");
-        else history.pushState(state, "", "");
-      } catch (e) {
-        console.warn("History API error:", e);
-      }
-    }
-
-    function showViewFromHistory(viewId) {
-      ukryjWszystkie();
-      const el = document.getElementById(viewId);
-      if (el) el.classList.remove("hidden");
-      currentView = viewId;
-    }
-
-    function appBack() {
-      history.back();
-    }
-
-    window.addEventListener("popstate", (event) => {
-      const state = event.state;
-      if (state && state.view) showViewFromHistory(state.view);
-      else showViewFromHistory(clubId ? "loginView" : "orgHubLandingView");
-    });
-
-    window.addEventListener('load', () => {
-      odtworzIntroSound();
-      setTimeout(() => {
-        document.getElementById('splash').style.display = 'none';
-        document.getElementById('app').classList.remove('hidden');
-        document.getElementById("wersjaNum").textContent = WERSJA_APKI;
-
-        try {
-          history.replaceState({ view: clubId ? "loginView" : "orgHubLandingView" }, "", "");
-        } catch (e) {}
-
-        refreshClubBadge_();
-        showViewFromHistory(clubId ? "loginView" : "orgHubLandingView");
-      }, 5000);
-    });
-
-    function initStartView_() {
-  const cfg = loadLocalClubConfig();
-
-  // Jeśli nie ma configu → landing ORGHUB
-  if (!cfg || !cfg.clubId) {
-    goToView("orgHubLandingView", { replace: true });
-    return;
-  }
-
-  // Jeśli config jest → ustaw branding i idź do logowania
-  applyBranding_(cfg);
-  goToView("loginView", { replace: true });
+/* =================== 50 API (CORE / CLUB) =================== */
+function requireClubId() {
+  if (!clubId) throw new Error("Brak clubId. Najpierw skonfiguruj klub.");
 }
 
-function applyBranding_(cfg) {
-  // tło
-  if (cfg.bgColor) document.body.style.backgroundColor = cfg.bgColor;
-
-  // logo na logowaniu (podmień img na loginie)
-  const logoImg = document.querySelector("#loginView img.logo");
-  if (logoImg && cfg.logoDataUrl) logoImg.src = cfg.logoDataUrl;
+// POST do CORE bez clubId (np. createClub)
+async function apiCorePost(payload = {}) {
+  const body = new URLSearchParams({ ...payload });
+  const res = await fetch(CORE_URL, { method: "POST", body });
+  return res.json();
 }
 
-
-    /* =================== WYBÓR KLUBU =================== */
-    function pokazClubSetup(replace = false) {
-      goToView("clubSetupView", { replace });
-      const input = document.getElementById("clubIdInput");
-      if (input) input.value = clubId || "";
-      const msg = document.getElementById("clubSetupMsg");
-      if (msg) msg.innerText = "";
-    }
-
-    function wyczyscClubId() {
-      clubId = "";
-      localStorage.removeItem("clubId");
-      const input = document.getElementById("clubIdInput");
-      if (input) input.value = "";
-      const msg = document.getElementById("clubSetupMsg");
-      if (msg) msg.innerText = "";
-      refreshClubBadge_();
-    }
-
-    async function zapiszClubId() {
-      const msg = document.getElementById("clubSetupMsg");
-      const val = (document.getElementById("clubIdInput").value || "").trim();
-      if (!val) { msg.innerText = "Wpisz clubId."; return; }
-
-      clubId = val;
-      localStorage.setItem("clubId", clubId);
-      refreshClubBadge_();
-      msg.innerText = "✅ Zapisano. Przechodzę do logowania…";
-      setTimeout(() => goToView("loginView", { replace:true }), 250);
-    }
-
-    /* =================== NAWIGACJA WIDOKAMI =================== */
-    function pokazLogowanie() {
-      numerZalogowanego = null;
-      grupaZalogowanego = null;
-      window.grupyTrenera = "";
-      if (!clubId) { pokazClubSetup(true); return; }
-      refreshClubBadge_();
-      goToView("loginView");
-    }
-
-    function pokazRejestracjaSelect() { goToView("registerSelectView"); }
-    function pokazRejestracjaZawodnik() { goToView("registerZawodnikView"); }
-    function pokazRejestracjaTrener() { goToView("rejestracjaTrenerView"); }
-
-    function goToLanding() {
-  goToView("orgHubLandingView");
+// GET/POST do CLUB (wymaga clubId)
+async function apiClubGet(action, params = {}) {
+  requireClubId();
+  const url = new URL(CORE_URL);
+  url.searchParams.set("action", action);
+  url.searchParams.set("clubId", clubId);
+  Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v ?? ""));
+  const res = await fetch(url.toString(), { cache: "no-store" });
+  return res.json();
 }
 
-function goToConfig() {
-  goToView("clubConfigView");
+async function apiClubPost(payload = {}) {
+  requireClubId();
+  const body = new URLSearchParams({ clubId, ...payload });
+  const res = await fetch(CORE_URL, { method: "POST", body });
+  return res.json();
 }
 
-function submitClubConfig() {
-  const clubName = document.getElementById("cfgClubName").value.trim();
-  const sezonStart = document.getElementById("cfgSeasonStart").value.trim();
-  const sezonEnd = document.getElementById("cfgSeasonEnd").value.trim();
-  const email = document.getElementById("cfgEmail").value.trim();
-  const msg = document.getElementById("cfgMsg");
-
-  if (!clubName) return msg.innerText = "❌ Podaj nazwę klubu.";
-  if (!/^\d{4}-\d{2}$/.test(sezonStart)) return msg.innerText = "❌ Początek sezonu ma być RRRR-MM, np. 2026-09";
-  if (!/^\d{4}-\d{2}$/.test(sezonEnd)) return msg.innerText = "❌ Koniec sezonu ma być RRRR-MM, np. 2027-04";
-  if (!email) return msg.innerText = "❌ Podaj email admina.";
-
-  msg.innerText = `✅ Zapisane lokalnie (na razie tylko test UI): ${clubName}, ${sezonStart} → ${sezonEnd}, ${email}`;
-}
-
-
-    /* =================== LOGOWANIE =================== */
-    async function zaloguj() {
-      const login = document.getElementById("numer").value.trim();
-      const haslo = document.getElementById("haslo").value.trim();
-      const komunikat = document.getElementById("komunikat");
-
-      if (!clubId) { komunikat.innerText = "Ustaw clubId najpierw."; pokazClubSetup(); return; }
-      if (!login || !haslo) { komunikat.innerText = "Podaj login i hasło."; return; }
-
-      komunikat.innerText = "Trwa logowanie...";
-
-      try {
-        const data = await apiPost({ mode: "login", numer: login, haslo });
-
-        if (!data.success) {
-          komunikat.innerText = "❌ " + (data.message || "Błąd logowania");
-          return;
-        }
-
-        komunikat.innerText = "✅ Zalogowano";
-
-        if (data.role === "zawodnik") {
-          numerZalogowanego = data.login;
-          grupaZalogowanego = data.grupa || "";
-
-          const platnosci = await apiGet("platnosci", { numer: numerZalogowanego });
-
-          if (Array.isArray(platnosci) && platnosci.length > 0) {
-            goToView("platnosciView");
-            renderPlatnosci(platnosci);
-            return;
-          }
-
-          await pokazTreningi();
-          return;
-        }
-
-        if (data.role === "trener") {
-          window.grupyTrenera = data.grupa || "";
-          goToView("trainerPanelView");
-          return;
-        }
-
-      } catch (e) {
-        komunikat.innerText = "Błąd połączenia: " + (e?.message || e);
-      }
-    }
-
-    /* =================== PANEL TRENERA =================== */
-    function trainerPowrot() { appBack(); }
-
-    async function trainerPokazZawodnicy() {
-      goToView("trainerZawodnicyView");
-      const box = document.getElementById("trainerListaZawodnikow");
-      box.innerHTML = "<div class='card' style='background:#222;'>⏳ Ładowanie...</div>";
-
-      try {
-        const lista = await apiGet("statystykiSum", {});
-        if (!Array.isArray(lista) || lista.length === 0) {
-          box.innerHTML = "<div class='card' style='background:#111;'>Brak danych</div>";
-          return;
-        }
-
-        box.innerHTML = lista.map(z => `
-          <div class="card" style="text-align:left;">
-            <b>#${z.nr}</b> — ${z.nazwisko}<br>
-            <span style="opacity:0.8;">${z.suma} treningów łącznie</span>
-          </div>
-        `).join('');
-
-      } catch (err) {
-        box.innerHTML = "<div class='card' style='background:#700;'>Błąd pobierania danych</div>";
-      }
-    }
-
-    async function trainerPokazWydarzenia() {
-      goToView("trainerWydarzeniaView");
-      const lista = await apiGet("treningiTrener", { grupa: window.grupyTrenera || "" });
-      renderTreningiTrainer(lista);
-    }
-
-    function renderTreningiTrainer(lista) {
-      const div = document.getElementById("trainerListaWydarzen");
-      if (!lista?.length) {
-        div.innerHTML = "<p>Brak wydarzeń</p>";
-        return;
-      }
-
-      div.innerHTML = lista.map(t => `
-        <div class="card" data-event-id="${t.miesiac}-${t.czasCol}">
-          <b>${t.rodzaj}</b> &nbsp;&nbsp; ${t.data} (${t.dzien})<br>
-          Godzina: <b>${t.godzStart}</b> &nbsp;&nbsp;–&nbsp;&nbsp; <b>${t.godzKoniec}</b><br>
-          Trener: <b>${t.trener}</b> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Zapisanych: ${t.zapisanych}<br><br>
-
-          <button class="btn" onclick="trainerToggleZapisani('${t.id}')">👥 Zapisani</button>
-          <button class="btn danger" onclick="trainerShowDeletePopup('${t.miesiac}', ${t.czasCol})">🗑️ Usuń</button>
-          <div id="trainer-zapisani-${t.id}" class="hidden"></div>
-        </div>
-      `).join('');
-    }
-
-    async function trainerToggleZapisani(id) {
-      const box = document.getElementById(`trainer-zapisani-${id}`);
-      if (!box) return;
-
-      if (!box.classList.contains('hidden')) {
-        box.classList.add('hidden');
-        return;
-      }
-
-      box.classList.remove('hidden');
-      box.innerHTML = '<div class="card" style="background:#222;">⏳ Ładowanie...</div>';
-
-      try {
-        const lista = await apiGet("zapisani", { treningId: id });
-
-        if (!Array.isArray(lista) || !lista.length) {
-          box.innerHTML = '<div class="card" style="background:#111;">Brak zapisanych</div>';
-          return;
-        }
-
-        box.innerHTML = `<div class="card" style="background:#111;">
-          <b>Lista zapisanych:</b>
-          <ul style="margin:6px 0 0 20px; padding:0; list-style-type:none;">
-            ${lista.map(p => `<li>${p.nazwisko}</li>`).join('')}
-          </ul>
-        </div>`;
-      } catch {
-        box.innerHTML = '<div class="card" style="background:#700;">Błąd pobierania listy</div>';
-      }
-    }
-
-    /* =================== DODAWANIE WYDARZENIA (TRENER) =================== */
-    async function zaladujListeTrenerow() {
-      try {
-        const lista = await apiGet("getTrenerzy", {});
-        const t1 = document.getElementById("eventTrener1");
-        const t2 = document.getElementById("eventTrener2");
-
-        t1.innerHTML = "<option value=''>— wybierz trenera —</option>";
-        t2.innerHTML = "<option value=''>— Brak —</option>";
-
-        (lista || []).forEach(nazw => {
-          t1.innerHTML += `<option value="${nazw}">${nazw}</option>`;
-          t2.innerHTML += `<option value="${nazw}">${nazw}</option>`;
-        });
-      } catch (err) {
-        console.error("Błąd pobierania trenerów:", err);
-      }
-    }
-
-    function pokazDodajWydarzenie() {
-      goToView("trainerDodajWydarzenieView");
-      zaladujListeTrenerow();
-    }
-
-    function validHour(hhmm) { return /^\d{2}:\d{2}$/.test(hhmm); }
-
-    async function wyslijNoweWydarzenie() {
-      const data = document.getElementById("eventData").value;
-      const start = document.getElementById("eventStart").value;
-      const end = document.getElementById("eventEnd").value;
-      const rodzaj = document.getElementById("eventRodzaj").value;
-      const trener1 = document.getElementById("eventTrener1").value;
-      const trener2 = document.getElementById("eventTrener2").value;
-
-      const grupy = [...document.querySelectorAll(".eventGrupa:checked")]
-        .map(c => c.value)
-        .join(",");
-
-      const liczDoStat = document.getElementById("eventStat").checked;
-      const msg = document.getElementById("eventMsg");
-
-      if (!data || !start || !rodzaj) { msg.innerText = "Uzupełnij: Data, Godzina, Rodzaj."; return; }
-      if (!validHour(start) || !validHour(end)) { msg.innerText = "❌ Godzina w formacie HH:MM."; return; }
-      if (start >= end) { msg.innerText = "❌ Koniec musi być później niż start."; return; }
-
-      msg.innerText = "⏳ Dodawanie wydarzenia...";
-
-      try {
-        const r = await apiPost({
-          action: "dodajWydarzenie",
-          data,
-          godzStart: start,
-          godzKoniec: end,
-          rodzaj,
-          trener1,
-          trener2,
-          grupy,
-          liczDoStatystyk: String(liczDoStat)
-        });
-
-        msg.innerText = r.message || "Nieznany wynik.";
-
-        if (r.success) {
-          document.querySelectorAll("#trainerDodajWydarzenieView input").forEach(i => {
-            if (i.type !== "checkbox") i.value = "";
-            else i.checked = false;
-          });
-          setTimeout(() => trainerPokazWydarzenia(), 800);
-        }
-      } catch (err) {
-        msg.innerText = "❌ Błąd połączenia: " + err;
-      }
-    }
-
-    /* =================== PŁATNOŚCI =================== */
-    function renderPlatnosci(lista) {
-      const div = document.getElementById("listaPlatnosci");
-      if (!lista?.length) {
-        div.innerHTML = "<p>Brak zaległości ✅</p>" +
-          "<button class='full-btn' onclick='pokazTreningi()'>Dalej ➡</button>";
-        return;
-      }
-
-      div.innerHTML =
-        "<h3>Zaległe płatności:</h3>" +
-        lista.map(p =>
-          `<div class='card' style='background:#a00;'>🔴 ${p.nazwa} – ${p.kwota} zł</div>`
-        ).join('') +
-        `<button class='full-btn' onclick='pokazTreningi()' style='margin-top:20px;'>Dalej ➡</button>`;
-    }
-
-    async function pokazTreningi() {
-      goToView("homeView");
-      const lista = await apiGet("treningi", {
-        grupa: grupaZalogowanego,
-        numer: numerZalogowanego
-      });
-      renderTreningi(lista);
-    }
-
-    /* =================== WYDARZENIA (ZAWODNIK) =================== */
-    function renderTreningi(lista) {
-      const div = document.getElementById('listaTreningow');
-      if (!lista?.length) {
-        div.innerHTML = "<p>Brak wydarzeń</p>";
-        return;
-      }
-
-      div.innerHTML = lista.map(t => `
-        <div class="card">
-          <p>
-            <b>${t.rodzaj}</b> &nbsp;&nbsp; ${t.data} (${t.dzien})<br>
-            Godzina: <b>${t.godzStart}</b> &nbsp;&nbsp;–&nbsp;&nbsp; <b>${t.godzKoniec}</b><br>
-            Trener: <b>${t.trener}</b> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Zapisanych: ${t.zapisanych}
-          </p>
-
-          <div style="display:flex;justify-content:center;gap:8px;flex-wrap:wrap;">
-            <button id="btn-${t.id}" ${t.zapisany ? 'disabled' : ''} onclick="zapiszSie('${t.id}')">
-              ${t.zapisany ? 'Zapisano ✅' : 'Zapisz się'}
-            </button>
-            <button id="wypisz-${t.id}" ${t.zapisany ? '' : 'disabled'} style="background:#444;" onclick="wypiszSie('${t.id}')">
-              Wypisz się
-            </button>
-            <button style="background:#333;" onclick="toggleZapisani('${t.id}')">👥 Zapisani</button>
-          </div>
-
-          <div id="zapisani-${t.id}" class="hidden lista-zapisanych"></div>
-        </div>
-      `).join('');
-    }
-
-    async function toggleZapisani(id) {
-      const box = document.getElementById(`zapisani-${id}`);
-      if (!box) return;
-
-      if (!box.classList.contains('hidden')) {
-        box.classList.add('hidden');
-        return;
-      }
-
-      box.classList.remove('hidden');
-      box.innerHTML = '<div class="card" style="background:#222;">⏳ Ładowanie...</div>';
-
-      try {
-        const lista = await apiGet("zapisani", { treningId: id });
-
-        if (!Array.isArray(lista) || lista.length === 0) {
-          box.innerHTML = '<div class="card" style="background:#111;">Brak zapisanych</div>';
-          return;
-        }
-
-        box.innerHTML = `<div class="card" style="background:#111;">
-          <b>Lista zapisanych:</b>
-          <ul style="margin:6px 0 0 20px; padding:0; list-style-type:none;">
-            ${lista.map(p => `<li>${p.nazwisko}</li>`).join('')}
-          </ul>
-        </div>`;
-      } catch {
-        box.innerHTML = '<div class="card" style="background:#700;">Błąd pobierania listy</div>';
-      }
-    }
-
-    async function zapiszSie(id) {
-      const btn = document.getElementById(`btn-${id}`);
-      const wypiszBtn = document.getElementById(`wypisz-${id}`);
-      const box = document.getElementById(`zapisani-${id}`);
-
-      btn.classList.add("loading");
-      try {
-        const r = await apiGet("zapisz", { numer: numerZalogowanego, treningId: id });
-        if (r.ok) {
-          btn.innerText = "Zapisano ✅";
-          btn.disabled = true;
-          wypiszBtn.disabled = false;
-          if (box && !box.classList.contains("hidden")) await odswiezListeZapisanych(id);
-        } else {
-          alert(r.message);
-        }
-      } catch (err) {
-        alert("Błąd połączenia: " + err);
-      } finally {
-        btn.classList.remove("loading");
-      }
-    }
-
-    async function wypiszSie(id) {
-      const btn = document.getElementById(`wypisz-${id}`);
-      const zapiszBtn = document.getElementById(`btn-${id}`);
-      const box = document.getElementById(`zapisani-${id}`);
-
-      btn.classList.add("loading");
-      try {
-        const r = await apiGet("wypisz", { numer: numerZalogowanego, treningId: id });
-        if (r.ok) {
-          zapiszBtn.innerText = "Zapisz się";
-          zapiszBtn.disabled = false;
-          btn.disabled = true;
-          if (box && !box.classList.contains("hidden")) await odswiezListeZapisanych(id);
-        } else {
-          alert(r.message);
-        }
-      } catch (err) {
-        alert("Błąd połączenia: " + err);
-      } finally {
-        btn.classList.remove("loading");
-      }
-    }
-
-    async function odswiezListeZapisanych(id) {
-      const box = document.getElementById(`zapisani-${id}`);
-      if (!box) return;
-
-      box.innerHTML = '<div class="card" style="background:#222;">⏳ Odświeżanie...</div>';
-      try {
-        const lista = await apiGet("zapisani", { treningId: id });
-
-        if (!Array.isArray(lista) || lista.length === 0) {
-          box.innerHTML = '<div class="card" style="background:#111;">Brak zapisanych</div>';
-          return;
-        }
-
-        box.innerHTML = `<div class="card" style="background:#111;">
-          <b>Lista zapisanych:</b>
-          <ul style="margin:6px 0 0 20px; padding:0; list-style-type:none;">
-            ${lista.map(p => `<li>${p.nazwisko}</li>`).join('')}
-          </ul>
-        </div>`;
-      } catch {
-        box.innerHTML = '<div class="card" style="background:#700;">Błąd odświeżania</div>';
-      }
-    }
-
-    /* =================== STATYSTYKI =================== */
-    async function pokazStatystyki() {
-      goToView("statsView");
-      const lista = await apiGet("statystyki", { numer: numerZalogowanego });
-      renderStatystyki(lista);
-    }
-
-    function renderStatystyki(lista) {
-      const div = document.getElementById("listaStatystyk");
-      if (!lista?.length) { div.innerHTML = "<p>Brak danych</p>"; return; }
-
-      const suma = lista.reduce((acc, s) => acc + (Number(s.treningi) || 0), 0);
-      div.innerHTML =
-        lista.map(s => `<div class="card">📅 ${s.miesiac} — 🏒 ${s.treningi} treningów</div>`).join('') +
-        `<div class="card" style="background:#222;margin-top:20px;font-weight:bold;">
-          🔥 Łącznie: ${suma} treningów w sezonie
-        </div>`;
-    }
-
-    function powrotDoTreningow() { appBack(); }
-    function powrotDoPlatnosci() { appBack(); }
-
-    /* =================== REJESTRACJA =================== */
-    async function wyslijRejestracje() {
-      const numer = document.getElementById("regNumer").value.trim();
-      const nazwisko = document.getElementById("regNazwisko").value.trim();
-      const haslo = document.getElementById("regHaslo").value.trim();
-      const msg = document.getElementById("regMsg");
-
-      if (!numer || !nazwisko || !haslo) { msg.innerText = "Wypełnij wszystkie pola."; return; }
-
-      msg.innerText = "⏳ Rejestracja...";
-      try {
-        const data = await apiPost({ mode: "rejestracja", numer, nazwisko, haslo });
-
-        if (data.ok) {
-          document.getElementById("regNumer").value = "";
-          document.getElementById("regNazwisko").value = "";
-          document.getElementById("regHaslo").value = "";
-          msg.innerText = "✅ Rejestracja zakończona!";
-          setTimeout(() => { msg.innerText = ""; pokazLogowanie(); }, 1500);
-        } else {
-          msg.innerText = "❌ " + (data.msg || "Błąd");
-        }
-      } catch (e) {
-        msg.innerText = "Błąd połączenia.";
-      }
-    }
-
-    async function wyslijRejestracjeTrener() {
-      const poleNazw = document.getElementById("regNazwiskoTrener");
-      const poleHaslo = document.getElementById("regHasloTrener");
-      const msg = document.getElementById("regMsgTrener");
-
-      const nazwisko = poleNazw.value.trim();
-      const haslo = poleHaslo.value.trim();
-      if (!nazwisko || !haslo) { msg.innerText = "Wypełnij wszystkie pola."; return; }
-
-      msg.innerText = "⏳ Rejestracja...";
-      try {
-        const data = await apiPost({ mode: "rejestracjaTrener", nazwisko, haslo });
-
-        if (data.ok) {
-          const inic = data.inic || "(?)";
-          msg.innerHTML = `
-            ✅ <b>Zarejestrowano trenera!</b><br>
-            Login do systemu: <b>${inic}</b><br><br>
-            <button class="full-btn" onclick="navigator.clipboard.writeText('${inic}')">📋 Skopiuj login</button>
-          `;
-          poleNazw.value = "";
-          poleHaslo.value = "";
-          setTimeout(() => { msg.innerText = ""; pokazLogowanie(); }, 8000);
-        } else {
-          msg.innerText = "❌ " + (data.msg || "Błąd");
-        }
-      } catch (e) {
-        msg.innerText = "Błąd połączenia.";
-      }
-    }
-
-    /* =================== USUWANIE WYDARZENIA =================== */
-    let deleteMiesiac = null;
-    let deleteCzasCol = null;
-
-    function trainerShowDeletePopup(miesiac, czasCol) {
-      deleteMiesiac = miesiac;
-      deleteCzasCol = czasCol;
-      document.getElementById("trainerDeletePopup").classList.add("show");
-    }
-
-    function trainerHideDeletePopup() {
-      document.getElementById("trainerDeletePopup").classList.remove("show");
-    }
-
-    async function trainerConfirmDeleteYes() {
-      trainerHideDeletePopup();
-
-      const treningId = `${deleteMiesiac}-${deleteCzasCol}`;
-      const eventId = treningId;
-      const card = document.querySelector(`[data-event-id='${eventId}']`);
-
-      if (card) {
-        card.innerHTML = `<div class="card" style="background:#222; text-align:center;">⏳ Usuwam wydarzenie…</div>`;
-      }
-
-      if (!deleteMiesiac || !deleteCzasCol) {
-        if (card) {
-          card.innerHTML = `<div class="card" style="background:#522; text-align:center;">❌ Brak danych do usunięcia.</div>`;
-        }
-        return;
-      }
-
-      try {
-        const data = await apiGet("usunWydarzenie", { treningId });
-
-        if (data.success) {
-          if (card) {
-            card.innerHTML = `<div class="card" style="background:#152; text-align:center;">🗑️ Wydarzenie zostało usunięte</div>`;
-          }
-          setTimeout(() => trainerPokazWydarzenia(), 800);
-        } else {
-          if (card) {
-            card.innerHTML = `<div class="card" style="background:#522; text-align:center;">❌ Błąd usuwania: ${data.error || "Nieznany błąd"}</div>`;
-          }
-        }
-      } catch (err) {
-        if (card) {
-          card.innerHTML = `<div class="card" style="background:#522; text-align:center;">❌ Błąd połączenia: ${err}</div>`;
-        }
-      }
-    }
-    /* =================== ORGHUB – KONFIG UI =================== */
+/* =================== 60 ORGHUB START / KONFIGURACJA =================== */
+// Tu masz dwa widoki: orgHubLandingView (start) i clubConfigView (panel)
+// Docelowo zrobimy “przycisk zamienia się w input” — ale to będzie kolejny krok.
 
 let cfgDraft = {
   clubName: "",
   email: "",
   sezonStart: "", // YYYY-MM-01
-  sezonEnd: "",   // YYYY-MM-30 (umownie)
+  sezonEnd: "",   // YYYY-MM-30 (tymczasowo)
   bgColor: "#000000",
-  logoDataUrl: ""
+  logoDataUrl: "" // dataURL
 };
 
+// paleta (więcej kolorów zrobimy w następnym kroku)
 const COLOR_PRESETS = [
-  // Czarne / szarości (2 odcienie)
-  "#000000", "#1a1a1a",
-
-  // Granat (2)
-  "#0b1b2b", "#123a5a",
-
-  // Niebieski (2)
-  "#0b2b5a", "#1a4fa3",
-
-  // Turkus (2)
-  "#0b2b2b", "#118a8a",
-
-  // Zieleń (2)
-  "#0b2b1b", "#1f7a3a",
-
-  // Oliwka (2)
-  "#2b2b0b", "#7a7a1f",
-
-  // Pomarańcz/brąz (2)
-  "#2b1b0b", "#a35a1a",
-
-  // Bordo/fiolet (2)
-  "#2b0b1b", "#6a1b3a"
+  "#000000","#111111","#1b1b1b","#2a2a2a",
+  "#0b1220","#0f1a2b","#132235","#1a2f4a",
+  "#1a0f1f","#2a1232","#3a1444","#4a1757",
+  "#102015","#15301f","#1a4028","#205232",
 ];
-
-
-function goToConfig() {
-  // jeśli istnieje zapisany config → wczytaj do draftu (edycja)
-  const saved = loadLocalClubConfig();
-  if (saved) cfgDraft = { ...cfgDraft, ...saved };
-
-  renderConfigUI_();
-  goToView("clubConfigView");
-}
-
-function goBackFromConfig() {
-  const saved = loadLocalClubConfig();
-  if (saved && saved.clubId) goToView("loginView");
-  else goToView("orgHubLandingView");
-}
 
 function renderConfigUI_() {
   const nameEl = document.getElementById("cfgClubNameLabel");
@@ -2018,32 +1172,48 @@ function renderConfigUI_() {
   const emEl = document.getElementById("cfgEmailLabel");
   const colEl = document.getElementById("cfgColorLabel");
   const prev = document.getElementById("cfgLogoPreview");
+  const grid = document.getElementById("cfgColorGrid");
 
-  nameEl.textContent = cfgDraft.clubName ? `✅ ${cfgDraft.clubName}` : "— nie ustawiono";
-  ssEl.textContent = cfgDraft.sezonStart ? `✅ ${cfgDraft.sezonStart}` : "— nie ustawiono";
-  seEl.textContent = cfgDraft.sezonEnd ? `✅ ${cfgDraft.sezonEnd}` : "— nie ustawiono";
-  emEl.textContent = cfgDraft.email ? `✅ ${cfgDraft.email}` : "— nie ustawiono";
-  colEl.textContent = cfgDraft.bgColor ? `✅ ${cfgDraft.bgColor}` : "— nie ustawiono";
+  if (nameEl) nameEl.textContent = cfgDraft.clubName ? `✅ ${cfgDraft.clubName}` : "— nie ustawiono";
+  if (ssEl) ssEl.textContent = cfgDraft.sezonStart ? `✅ ${cfgDraft.sezonStart}` : "— nie ustawiono";
+  if (seEl) seEl.textContent = cfgDraft.sezonEnd ? `✅ ${cfgDraft.sezonEnd}` : "— nie ustawiono";
+  if (emEl) emEl.textContent = cfgDraft.email ? `✅ ${cfgDraft.email}` : "— nie ustawiono";
+  if (colEl) colEl.textContent = cfgDraft.bgColor ? `✅ ${cfgDraft.bgColor}` : "— nie ustawiono";
 
-  if (cfgDraft.logoDataUrl) {
-    prev.src = cfgDraft.logoDataUrl;
-    prev.style.display = "inline-block";
-  } else {
-    prev.style.display = "none";
+  if (prev) {
+    if (cfgDraft.logoDataUrl) {
+      prev.src = cfgDraft.logoDataUrl;
+      prev.style.display = "inline-block";
+    } else {
+      prev.style.display = "none";
+    }
   }
 
-  // siatka kolorów
-  const grid = document.getElementById("cfgColorGrid");
-  grid.innerHTML = COLOR_PRESETS.map(c => `
-    <div onclick="setBgColor('${c}')" style="
-      width:100%; aspect-ratio:1/1; border-radius:10px;
-      border:1px solid #444; background:${c}; cursor:pointer;">
-    </div>
-  `).join("");
+  if (grid) {
+    grid.innerHTML = COLOR_PRESETS.map(c => `
+      <div onclick="setBgColor('${c}')" style="
+        width:100%; aspect-ratio:1/1; border-radius:10px;
+        border:1px solid #444; background:${c}; cursor:pointer;">
+      </div>
+    `).join("");
+  }
+}
+
+function goToConfig() {
+  const saved = loadLocalClubConfig();
+  if (saved) cfgDraft = { ...cfgDraft, ...saved };
+
+  renderConfigUI_();
+  goToView("clubConfigView");
+}
+
+function goBackFromConfig() {
+  goToView(clubId ? "loginView" : "orgHubLandingView");
 }
 
 function toggleColorPicker(show) {
   const grid = document.getElementById("cfgColorGrid");
+  if (!grid) return;
   if (show) grid.classList.remove("hidden");
   else grid.classList.add("hidden");
 }
@@ -2051,25 +1221,28 @@ function toggleColorPicker(show) {
 function setBgColor(color) {
   cfgDraft.bgColor = color;
   document.body.style.backgroundColor = color;
-  document.getElementById("cfgColorLabel").textContent = `✅ ${color}`;
+  const colEl = document.getElementById("cfgColorLabel");
+  if (colEl) colEl.textContent = `✅ ${color}`;
 }
 
 function pickLogo() {
   const input = document.getElementById("cfgLogoInput");
+  if (!input) return;
+
   input.onchange = async () => {
     const file = input.files && input.files[0];
     if (!file) return;
 
-    // szybka walidacja
     if (file.size > 2 * 1024 * 1024) {
-      document.getElementById("cfgMsg").textContent = "❌ Logo za duże (max ~2MB).";
+      const msg = document.getElementById("cfgMsg");
+      if (msg) msg.textContent = "❌ Logo za duże (max ~2MB).";
       return;
     }
 
-    const dataUrl = await fileToDataUrl_(file);
-    cfgDraft.logoDataUrl = dataUrl;
+    cfgDraft.logoDataUrl = await fileToDataUrl_(file);
     renderConfigUI_();
   };
+
   input.click();
 }
 
@@ -2082,94 +1255,565 @@ function fileToDataUrl_(file) {
   });
 }
 
+// Tymczasowo jeszcze używamy promptów. Ty chcesz inline-input w przycisku — zrobimy w kolejnym kroku.
 function editClubName() {
   const v = prompt("Podaj nazwę klubu:", cfgDraft.clubName || "");
   if (v === null) return;
   cfgDraft.clubName = v.trim();
   renderConfigUI_();
 }
-
 function editEmail() {
   const v = prompt("Podaj email admina:", cfgDraft.email || "");
   if (v === null) return;
   cfgDraft.email = v.trim();
   renderConfigUI_();
 }
-
 function editSeasonStart() {
   const v = prompt("Początek sezonu (RRRR-MM), np. 2026-09:", cfgDraft.sezonStart ? cfgDraft.sezonStart.slice(0,7) : "");
   if (v === null) return;
   const m = String(v).trim();
   if (!/^\d{4}-\d{2}$/.test(m)) {
-    document.getElementById("cfgMsg").textContent = "❌ Zły format. Użyj RRRR-MM.";
+    const msg = document.getElementById("cfgMsg");
+    if (msg) msg.textContent = "❌ Zły format. Użyj RRRR-MM.";
     return;
   }
   cfgDraft.sezonStart = `${m}-01`;
   renderConfigUI_();
 }
-
 function editSeasonEnd() {
   const v = prompt("Koniec sezonu (RRRR-MM), np. 2027-04:", cfgDraft.sezonEnd ? cfgDraft.sezonEnd.slice(0,7) : "");
   if (v === null) return;
   const m = String(v).trim();
   if (!/^\d{4}-\d{2}$/.test(m)) {
-    document.getElementById("cfgMsg").textContent = "❌ Zły format. Użyj RRRR-MM.";
+    const msg = document.getElementById("cfgMsg");
+    if (msg) msg.textContent = "❌ Zły format. Użyj RRRR-MM.";
     return;
   }
-  // Umownie kończymy na -30 (backend może to skorygować)
-  cfgDraft.sezonEnd = `${m}-30`;
+  cfgDraft.sezonEnd = `${m}-30`; // backend doprecyzuje
   renderConfigUI_();
 }
 
- // --- inline edit: Nazwa klubu ---
-let cfg = window.cfg || { clubName:"", sezonStart:"", sezonEnd:"", email:"", color:"#000000", logoDataUrl:"" };
-window.cfg = cfg;
-
-function clubNameEditStart() {
-  const span = document.getElementById("clubNameText");
-  const inp  = document.getElementById("clubNameInput");
-  if (!span || !inp) return;
-
-  // pokaż input w przycisku
-  span.classList.add("hidden");
-  inp.classList.remove("hidden");
-  inp.value = cfg.clubName || "";
-  inp.focus();
-  inp.select();
-
-  inp.onkeydown = (e) => {
-    if (e.key === "Enter") clubNameEditCommit();
-    if (e.key === "Escape") clubNameEditCancel();
-  };
-  inp.onblur = () => clubNameEditCommit();
+/* =================== 61 WYSŁANIE KONFIGURACJI -> CREATECLUB =================== */
+function validateCfg_() {
+  if (!cfgDraft.logoDataUrl) return "Wgraj logo.";
+  if (!cfgDraft.clubName) return "Podaj nazwę klubu.";
+  if (!cfgDraft.sezonStart) return "Podaj początek sezonu.";
+  if (!cfgDraft.sezonEnd) return "Podaj koniec sezonu.";
+  if (!cfgDraft.bgColor) return "Wybierz kolor tła.";
+  if (!cfgDraft.email) return "Podaj email admina.";
+  if (cfgDraft.sezonStart > cfgDraft.sezonEnd) return "Początek sezonu nie może być po końcu sezonu.";
+  return "";
 }
 
-function clubNameEditCommit() {
-  const span = document.getElementById("clubNameText");
-  const inp  = document.getElementById("clubNameInput");
-  if (!span || !inp) return;
+async function submitClubConfig() {
+  const msg = document.getElementById("cfgMsg");
+  if (msg) msg.textContent = "";
 
-  const val = (inp.value || "").trim();
-  cfg.clubName = val;
+  const err = validateCfg_();
+  if (err) {
+    if (msg) msg.textContent = "❌ " + err;
+    return;
+  }
 
-  // przywróć przycisk
-  inp.classList.add("hidden");
-  span.classList.remove("hidden");
-  span.textContent = val ? `Nazwa: ${val}` : "Podaj nazwę klubu";
+  // zapis roboczy lokalnie (żeby nie zginęło po odświeżeniu)
+  saveLocalClubConfig({ ...cfgDraft });
+
+  showBusy("Tworzę pliki klubu i konfigurację sezonu…");
+
+  try {
+    const r = await apiCorePost({
+      action: "createClub",
+      clubName: cfgDraft.clubName,
+      sezonStart: cfgDraft.sezonStart,
+      sezonEnd: cfgDraft.sezonEnd,
+      bgColor: cfgDraft.bgColor,
+      ownerEmail: cfgDraft.email,
+      logoBase64: cfgDraft.logoDataUrl
+    });
+
+    if (!r || (r.success !== true && r.ok !== true)) {
+      hideBusy();
+      if (msg) msg.textContent = "❌ " + (r?.error || r?.message || JSON.stringify(r));
+      return;
+    }
+
+    if (!r.clubId) {
+      hideBusy();
+      if (msg) msg.textContent = "❌ CORE nie zwrócił clubId.";
+      return;
+    }
+
+    // ustaw clubId
+    saveClubId_(r.clubId);
+
+    // theme
+    const theme = {
+      bgColor: r.bgColor || cfgDraft.bgColor,
+      logoUrl: r.logoUrl || cfgDraft.logoDataUrl, // jeśli CORE nie hostuje jeszcze logo, użyj dataUrl
+      clubName: r.clubName || cfgDraft.clubName
+    };
+    saveTheme_(theme);
+    applyTheme_(theme);
+
+    // utrwal config (z clubId)
+    saveLocalClubConfig({ ...cfgDraft, clubId: r.clubId });
+
+    hideBusy();
+    if (msg) msg.textContent = "✅ Gotowe. Przechodzę do logowania…";
+
+    refreshClubBadge_();
+    setTimeout(() => goToView("loginView", { replace:true }), 400);
+
+  } catch (e) {
+    hideBusy();
+    if (msg) msg.textContent = "❌ Błąd połączenia: " + (e?.message || e);
+  }
 }
 
-function clubNameEditCancel() {
-  const span = document.getElementById("clubNameText");
-  const inp  = document.getElementById("clubNameInput");
-  if (!span || !inp) return;
+/* =================== 70 LOGOWANIE / REJESTRACJA =================== */
+function pokazLogowanie() {
+  numerZalogowanego = null;
+  grupaZalogowanego = null;
+  window.grupyTrenera = "";
+  refreshClubBadge_();
+  goToView("loginView");
+}
+function pokazRejestracjaSelect() { goToView("registerSelectView"); }
+function pokazRejestracjaZawodnik() { goToView("registerZawodnikView"); }
+function pokazRejestracjaTrener() { goToView("rejestracjaTrenerView"); }
 
-  inp.classList.add("hidden");
-  span.classList.remove("hidden");
+async function zaloguj() {
+  const login = document.getElementById("numer").value.trim();
+  const haslo = document.getElementById("haslo").value.trim();
+  const komunikat = document.getElementById("komunikat");
+
+  if (!clubId) { komunikat.innerText = "Najpierw skonfiguruj klub."; goToView("orgHubLandingView"); return; }
+  if (!login || !haslo) { komunikat.innerText = "Podaj login i hasło."; return; }
+
+  komunikat.innerText = "Trwa logowanie...";
+
+  try {
+    const data = await apiClubPost({ mode: "login", numer: login, haslo });
+
+    if (!data.success) {
+      komunikat.innerText = "❌ " + (data.message || "Błąd logowania");
+      return;
+    }
+
+    komunikat.innerText = "✅ Zalogowano";
+
+    if (data.role === "zawodnik") {
+      numerZalogowanego = data.login;
+      grupaZalogowanego = data.grupa || "";
+
+      const platnosci = await apiClubGet("platnosci", { numer: numerZalogowanego });
+      if (Array.isArray(platnosci) && platnosci.length > 0) {
+        goToView("platnosciView");
+        renderPlatnosci(platnosci);
+        return;
+      }
+
+      await pokazTreningi();
+      return;
+    }
+
+    if (data.role === "trener") {
+      window.grupyTrenera = data.grupa || "";
+      goToView("trainerPanelView");
+      return;
+    }
+
+  } catch (e) {
+    komunikat.innerText = "Błąd połączenia: " + (e?.message || e);
+  }
 }
 
+/* =================== 75 REJESTRACJA =================== */
+async function wyslijRejestracje() {
+  const numer = document.getElementById("regNumer").value.trim();
+  const nazwisko = document.getElementById("regNazwisko").value.trim();
+  const haslo = document.getElementById("regHaslo").value.trim();
+  const msg = document.getElementById("regMsg");
 
+  if (!numer || !nazwisko || !haslo) { msg.innerText = "Wypełnij wszystkie pola."; return; }
 
-  </script>
+  msg.innerText = "⏳ Rejestracja...";
+  try {
+    const data = await apiClubPost({ mode: "rejestracja", numer, nazwisko, haslo });
 
+    if (data.ok) {
+      document.getElementById("regNumer").value = "";
+      document.getElementById("regNazwisko").value = "";
+      document.getElementById("regHaslo").value = "";
+      msg.innerText = "✅ Rejestracja zakończona!";
+      setTimeout(() => { msg.innerText = ""; pokazLogowanie(); }, 1500);
+    } else {
+      msg.innerText = "❌ " + (data.msg || "Błąd");
+    }
+  } catch (e) {
+    msg.innerText = "Błąd połączenia.";
+  }
+}
+
+async function wyslijRejestracjeTrener() {
+  const poleNazw = document.getElementById("regNazwiskoTrener");
+  const poleHaslo = document.getElementById("regHasloTrener");
+  const msg = document.getElementById("regMsgTrener");
+
+  const nazwisko = poleNazw.value.trim();
+  const haslo = poleHaslo.value.trim();
+  if (!nazwisko || !haslo) { msg.innerText = "Wypełnij wszystkie pola."; return; }
+
+  msg.innerText = "⏳ Rejestracja...";
+  try {
+    const data = await apiClubPost({ mode: "rejestracjaTrener", nazwisko, haslo });
+
+    if (data.ok) {
+      const inic = data.inic || "(?)";
+      msg.innerHTML = `
+        ✅ <b>Zarejestrowano trenera!</b><br>
+        Login do systemu: <b>${inic}</b><br><br>
+        <button class="full-btn" onclick="navigator.clipboard.writeText('${inic}')">📋 Skopiuj login</button>
+      `;
+      poleNazw.value = "";
+      poleHaslo.value = "";
+      setTimeout(() => { msg.innerText = ""; pokazLogowanie(); }, 8000);
+    } else {
+      msg.innerText = "❌ " + (data.msg || "Błąd");
+    }
+  } catch (e) {
+    msg.innerText = "Błąd połączenia.";
+  }
+}
+
+/* =================== 80 ZAWODNIK: TRENINGI / ZAPISY =================== */
+function renderPlatnosci(lista) {
+  const div = document.getElementById("listaPlatnosci");
+  if (!lista?.length) {
+    div.innerHTML = "<p>Brak zaległości ✅</p>" +
+      "<button class='full-btn' onclick='pokazTreningi()'>Dalej ➡</button>";
+    return;
+  }
+
+  div.innerHTML =
+    "<h3>Zaległe płatności:</h3>" +
+    lista.map(p => `<div class='card' style='background:#a00;'>🔴 ${p.nazwa} – ${p.kwota} zł</div>`).join('') +
+    `<button class='full-btn' onclick='pokazTreningi()' style='margin-top:20px;'>Dalej ➡</button>`;
+}
+
+async function pokazTreningi() {
+  goToView("homeView");
+  const lista = await apiClubGet("treningi", { grupa: grupaZalogowanego, numer: numerZalogowanego });
+  renderTreningi(lista);
+}
+
+function renderTreningi(lista) {
+  const div = document.getElementById('listaTreningow');
+  if (!lista?.length) { div.innerHTML = "<p>Brak wydarzeń</p>"; return; }
+
+  div.innerHTML = lista.map(t => `
+    <div class="card">
+      <p>
+        <b>${t.rodzaj}</b> &nbsp;&nbsp; ${t.data} (${t.dzien})<br>
+        Godzina: <b>${t.godzStart}</b> – <b>${t.godzKoniec}</b><br>
+        Trener: <b>${t.trener}</b> &nbsp;&nbsp; Zapisanych: ${t.zapisanych}
+      </p>
+
+      <div style="display:flex;justify-content:center;gap:8px;flex-wrap:wrap;">
+        <button id="btn-${t.id}" ${t.zapisany ? 'disabled' : ''} onclick="zapiszSie('${t.id}')">
+          ${t.zapisany ? 'Zapisano ✅' : 'Zapisz się'}
+        </button>
+        <button id="wypisz-${t.id}" ${t.zapisany ? '' : 'disabled'} style="background:#444;" onclick="wypiszSie('${t.id}')">
+          Wypisz się
+        </button>
+        <button style="background:#333;" onclick="toggleZapisani('${t.id}')">👥 Zapisani</button>
+      </div>
+
+      <div id="zapisani-${t.id}" class="hidden lista-zapisanych"></div>
+    </div>
+  `).join('');
+}
+
+async function toggleZapisani(id) {
+  const box = document.getElementById(`zapisani-${id}`);
+  if (!box) return;
+
+  if (!box.classList.contains('hidden')) { box.classList.add('hidden'); return; }
+
+  box.classList.remove('hidden');
+  box.innerHTML = '<div class="card" style="background:#222;">⏳ Ładowanie...</div>';
+
+  try {
+    const lista = await apiClubGet("zapisani", { treningId: id });
+    if (!Array.isArray(lista) || !lista.length) {
+      box.innerHTML = '<div class="card" style="background:#111;">Brak zapisanych</div>';
+      return;
+    }
+    box.innerHTML = `<div class="card" style="background:#111;">
+      <b>Lista zapisanych:</b>
+      <ul style="margin:6px 0 0 20px; padding:0; list-style-type:none;">
+        ${lista.map(p => `<li>${p.nazwisko}</li>`).join('')}
+      </ul>
+    </div>`;
+  } catch {
+    box.innerHTML = '<div class="card" style="background:#700;">Błąd pobierania listy</div>';
+  }
+}
+
+async function zapiszSie(id) {
+  const btn = document.getElementById(`btn-${id}`);
+  const wypiszBtn = document.getElementById(`wypisz-${id}`);
+  const box = document.getElementById(`zapisani-${id}`);
+
+  btn.classList.add("loading");
+  try {
+    const r = await apiClubGet("zapisz", { numer: numerZalogowanego, treningId: id });
+    if (r.ok) {
+      btn.innerText = "Zapisano ✅";
+      btn.disabled = true;
+      wypiszBtn.disabled = false;
+      if (box && !box.classList.contains("hidden")) await odswiezListeZapisanych(id);
+    } else alert(r.message);
+  } catch (err) {
+    alert("Błąd połączenia: " + err);
+  } finally {
+    btn.classList.remove("loading");
+  }
+}
+
+async function wypiszSie(id) {
+  const btn = document.getElementById(`wypisz-${id}`);
+  const zapiszBtn = document.getElementById(`btn-${id}`);
+  const box = document.getElementById(`zapisani-${id}`);
+
+  btn.classList.add("loading");
+  try {
+    const r = await apiClubGet("wypisz", { numer: numerZalogowanego, treningId: id });
+    if (r.ok) {
+      zapiszBtn.innerText = "Zapisz się";
+      zapiszBtn.disabled = false;
+      btn.disabled = true;
+      if (box && !box.classList.contains("hidden")) await odswiezListeZapisanych(id);
+    } else alert(r.message);
+  } catch (err) {
+    alert("Błąd połączenia: " + err);
+  } finally {
+    btn.classList.remove("loading");
+  }
+}
+
+async function odswiezListeZapisanych(id) {
+  const box = document.getElementById(`zapisani-${id}`);
+  if (!box) return;
+
+  box.innerHTML = '<div class="card" style="background:#222;">⏳ Odświeżanie...</div>';
+  try {
+    const lista = await apiClubGet("zapisani", { treningId: id });
+    if (!Array.isArray(lista) || !lista.length) {
+      box.innerHTML = '<div class="card" style="background:#111;">Brak zapisanych</div>';
+      return;
+    }
+    box.innerHTML = `<div class="card" style="background:#111;">
+      <b>Lista zapisanych:</b>
+      <ul style="margin:6px 0 0 20px; padding:0; list-style-type:none;">
+        ${lista.map(p => `<li>${p.nazwisko}</li>`).join('')}
+      </ul>
+    </div>`;
+  } catch {
+    box.innerHTML = '<div class="card" style="background:#700;">Błąd odświeżania</div>';
+  }
+}
+
+/* =================== 90 TRENER: LISTA / WYDARZENIA / DODAWANIE / USUWANIE =================== */
+function trainerPowrot() { appBack(); }
+
+async function trainerPokazZawodnicy() {
+  goToView("trainerZawodnicyView");
+  const box = document.getElementById("trainerListaZawodnikow");
+  box.innerHTML = "<div class='card' style='background:#222;'>⏳ Ładowanie...</div>";
+
+  try {
+    const lista = await apiClubGet("statystykiSum", {});
+    if (!Array.isArray(lista) || lista.length === 0) {
+      box.innerHTML = "<div class='card' style='background:#111;'>Brak danych</div>";
+      return;
+    }
+
+    box.innerHTML = lista.map(z => `
+      <div class="card" style="text-align:left;">
+        <b>#${z.nr}</b> — ${z.nazwisko}<br>
+        <span style="opacity:0.8;">${z.suma} treningów łącznie</span>
+      </div>
+    `).join('');
+  } catch {
+    box.innerHTML = "<div class='card' style='background:#700;'>Błąd pobierania danych</div>";
+  }
+}
+
+async function trainerPokazWydarzenia() {
+  goToView("trainerWydarzeniaView");
+  const lista = await apiClubGet("treningiTrener", { grupa: window.grupyTrenera || "" });
+  renderTreningiTrainer(lista);
+}
+
+function renderTreningiTrainer(lista) {
+  const div = document.getElementById("trainerListaWydarzen");
+  if (!lista?.length) { div.innerHTML = "<p>Brak wydarzeń</p>"; return; }
+
+  div.innerHTML = lista.map(t => `
+    <div class="card" data-event-id="${t.miesiac}-${t.czasCol}">
+      <b>${t.rodzaj}</b> ${t.data} (${t.dzien})<br>
+      Godzina: <b>${t.godzStart}</b> – <b>${t.godzKoniec}</b><br>
+      Trener: <b>${t.trener}</b> | Zapisanych: ${t.zapisanych}<br><br>
+      <button class="btn" onclick="trainerToggleZapisani('${t.id}')">👥 Zapisani</button>
+      <button class="btn danger" onclick="trainerShowDeletePopup('${t.miesiac}', ${t.czasCol})">🗑️ Usuń</button>
+      <div id="trainer-zapisani-${t.id}" class="hidden"></div>
+    </div>
+  `).join('');
+}
+
+async function trainerToggleZapisani(id) {
+  const box = document.getElementById(`trainer-zapisani-${id}`);
+  if (!box) return;
+
+  if (!box.classList.contains('hidden')) { box.classList.add('hidden'); return; }
+
+  box.classList.remove('hidden');
+  box.innerHTML = '<div class="card" style="background:#222;">⏳ Ładowanie...</div>';
+
+  try {
+    const lista = await apiClubGet("zapisani", { treningId: id });
+    if (!Array.isArray(lista) || !lista.length) {
+      box.innerHTML = '<div class="card" style="background:#111;">Brak zapisanych</div>';
+      return;
+    }
+    box.innerHTML = `<div class="card" style="background:#111;">
+      <b>Lista zapisanych:</b>
+      <ul style="margin:6px 0 0 20px; padding:0; list-style-type:none;">
+        ${lista.map(p => `<li>${p.nazwisko}</li>`).join('')}
+      </ul>
+    </div>`;
+  } catch {
+    box.innerHTML = '<div class="card" style="background:#700;">Błąd pobierania listy</div>';
+  }
+}
+
+/* --- dodawanie wydarzenia --- */
+async function zaladujListeTrenerow() {
+  try {
+    const lista = await apiClubGet("getTrenerzy", {});
+    const t1 = document.getElementById("eventTrener1");
+    const t2 = document.getElementById("eventTrener2");
+    t1.innerHTML = "<option value=''>— wybierz trenera —</option>";
+    t2.innerHTML = "<option value=''>— Brak —</option>";
+    (lista || []).forEach(nazw => {
+      t1.innerHTML += `<option value="${nazw}">${nazw}</option>`;
+      t2.innerHTML += `<option value="${nazw}">${nazw}</option>`;
+    });
+  } catch {}
+}
+
+function pokazDodajWydarzenie() {
+  goToView("trainerDodajWydarzenieView");
+  zaladujListeTrenerow();
+}
+function validHour(hhmm) { return /^\d{2}:\d{2}$/.test(hhmm); }
+
+async function wyslijNoweWydarzenie() {
+  const data = document.getElementById("eventData").value;
+  const start = document.getElementById("eventStart").value;
+  const end = document.getElementById("eventEnd").value;
+  const rodzaj = document.getElementById("eventRodzaj").value;
+  const trener1 = document.getElementById("eventTrener1").value;
+  const trener2 = document.getElementById("eventTrener2").value;
+
+  const grupy = [...document.querySelectorAll(".eventGrupa:checked")].map(c => c.value).join(",");
+  const liczDoStat = document.getElementById("eventStat").checked;
+  const msg = document.getElementById("eventMsg");
+
+  if (!data || !start || !rodzaj) { msg.innerText = "Uzupełnij: Data, Godzina, Rodzaj."; return; }
+  if (!validHour(start) || !validHour(end)) { msg.innerText = "❌ Godzina w formacie HH:MM."; return; }
+  if (start >= end) { msg.innerText = "❌ Koniec musi być później niż start."; return; }
+
+  msg.innerText = "⏳ Dodawanie wydarzenia...";
+  try {
+    const r = await apiClubPost({
+      action: "dodajWydarzenie",
+      data,
+      godzStart: start,
+      godzKoniec: end,
+      rodzaj,
+      trener1,
+      trener2,
+      grupy,
+      liczDoStatystyk: String(liczDoStat)
+    });
+
+    msg.innerText = r.message || "Nieznany wynik.";
+
+    if (r.success) {
+      document.querySelectorAll("#trainerDodajWydarzenieView input").forEach(i => {
+        if (i.type !== "checkbox") i.value = "";
+        else i.checked = false;
+      });
+      setTimeout(() => trainerPokazWydarzenia(), 800);
+    }
+  } catch (err) {
+    msg.innerText = "❌ Błąd połączenia: " + err;
+  }
+}
+
+/* --- usuwanie wydarzenia --- */
+let deleteMiesiac = null;
+let deleteCzasCol = null;
+
+function trainerShowDeletePopup(miesiac, czasCol) {
+  deleteMiesiac = miesiac;
+  deleteCzasCol = czasCol;
+  document.getElementById("trainerDeletePopup").classList.add("show");
+}
+function trainerHideDeletePopup() {
+  document.getElementById("trainerDeletePopup").classList.remove("show");
+}
+async function trainerConfirmDeleteYes() {
+  trainerHideDeletePopup();
+
+  const treningId = `${deleteMiesiac}-${deleteCzasCol}`;
+  const card = document.querySelector(`[data-event-id='${treningId}']`);
+  if (card) card.innerHTML = `<div class="card" style="background:#222;text-align:center;">⏳ Usuwam wydarzenie…</div>`;
+
+  try {
+    const data = await apiClubGet("usunWydarzenie", { treningId });
+    if (data.success) {
+      if (card) card.innerHTML = `<div class="card" style="background:#152;text-align:center;">🗑️ Usunięto</div>`;
+      setTimeout(() => trainerPokazWydarzenia(), 800);
+    } else {
+      if (card) card.innerHTML = `<div class="card" style="background:#522;text-align:center;">❌ ${data.error || "Błąd"}</div>`;
+    }
+  } catch (err) {
+    if (card) card.innerHTML = `<div class="card" style="background:#522;text-align:center;">❌ ${err}</div>`;
+  }
+}
+
+/* =================== 99 START APLIKACJI =================== */
+window.addEventListener('load', () => {
+  odtworzIntroSound();
+  setTimeout(() => {
+    const splash = document.getElementById('splash');
+    const app = document.getElementById('app');
+    if (splash) splash.style.display = 'none';
+    if (app) app.classList.remove('hidden');
+
+    const wersja = document.getElementById("wersjaNum");
+    if (wersja) wersja.textContent = WERSJA_APKI;
+
+    try {
+      history.replaceState({ view: clubId ? "loginView" : "orgHubLandingView" }, "", "");
+    } catch (e) {}
+
+    startApp_();
+  }, 5000);
+});
+</script>
 </body>
 </html>
