@@ -168,7 +168,7 @@
   </style>
 <script>
   // Ustaw globalnie dla Twojego dużego skryptu:
-  window.WERSJA_APKI = '1.04.05.03';
+  window.WERSJA_APKI = '1.04.05.04';
 
   const poprzednia = localStorage.getItem('wersjaApki');
   if (poprzednia !== window.WERSJA_APKI) {
@@ -198,15 +198,7 @@
   </div>
 
   <!-- Splash -->
-<div id="splash" style="
-  position:fixed;
-  inset:0;
-  background:#ffffff;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  z-index:4000;
-">
+<div id="splash">
   <div style="text-align:center;">
     <div style="
       font-size:48px;
@@ -1267,22 +1259,30 @@ async function trainerConfirmDeleteYes() {
 /* =================== 99 START APLIKACJI =================== */
 window.addEventListener('load', () => {
   odtworzIntroSound();
-  setTimeout(() => {
-    const splash = document.getElementById('splash');
-    const app = document.getElementById('app');
-    if (splash) splash.style.display = 'none';
-    if (app) app.classList.remove('hidden');
 
-    const wersja = document.getElementById("wersjaNum");
-    if (wersja) wersja.textContent = WERSJA_APKI;
+  const splash = document.getElementById('splash');
+  const app = document.getElementById('app');
 
-    try {
-      history.replaceState({ view: clubId ? "loginView" : "orgHubLandingView" }, "", "");
-    } catch (e) {}
+  if (app) app.classList.remove('hidden');
 
-    startApp_();
-  }, 5000);
+  const wersja = document.getElementById("wersjaNum");
+  if (wersja) wersja.textContent = WERSJA_APKI;
+
+  try {
+    history.replaceState(
+      { view: (clubId && isCfgLocked_()) ? "loginView" : "orgHubLandingView" },
+      "",
+      ""
+    );
+  } catch (e) {}
+
+  // START aplikacji (router, theme itd.)
+  startApp_();
+
+  // splash znika NA KOŃCU, gdy wszystko gotowe
+  if (splash) splash.style.display = 'none';
 });
+
 </script>
 </body>
 </html>
