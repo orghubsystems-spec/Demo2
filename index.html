@@ -168,7 +168,7 @@
   </style>
 <script>
   // Ustaw globalnie dla Twojego dużego skryptu:
-  window.WERSJA_APKI = '1.05.09.04';
+  window.WERSJA_APKI = '1.05.10.04';
 
   const poprzednia = localStorage.getItem('wersjaApki');
   if (poprzednia !== window.WERSJA_APKI) {
@@ -638,6 +638,41 @@ const COLOR_PRESETS = [
   "#2b0b1b", "#6a1b3a"
 ];
 
+  const COLOR_NAMES = {
+  // Czarne / szarości
+  "#000000": "Czarny",
+  "#1a1a1a": "Grafit",
+
+  // Granat
+  "#0b1b2b": "Granat",
+  "#123a5a": "Granat jasny",
+
+  // Niebieski
+  "#0b2b5a": "Niebieski",
+  "#1a4fa3": "Niebieski jasny",
+
+  // Turkus
+  "#0b2b2b": "Turkus",
+  "#118a8a": "Turkus jasny",
+
+  // Zieleń
+  "#0b2b1b": "Zieleń",
+  "#1f7a3a": "Zieleń jasna",
+
+  // Oliwka
+  "#2b2b0b": "Oliwka",
+  "#7a7a1f": "Oliwka jasna",
+
+  // Pomarańcz/brąz
+  "#2b1b0b": "Brąz",
+  "#a35a1a": "Pomarańcz",
+
+  // Bordo/fiolet
+  "#2b0b1b": "Bordo",
+  "#6a1b3a": "Fiolet"
+};
+
+
  function clubNameEditStart() {
   const btn = document.getElementById("btnClubName");
   const span = document.getElementById("clubNameText");
@@ -894,8 +929,18 @@ function setBgColor(color) {
   // Pod przyciskiem ma być zawsze pusto
   const colEl = document.getElementById("cfgColorLabel");
   if (colEl) colEl.textContent = "";
-}
 
+  // Tekst NA KLAWISZU ma pokazywać nazwę wybranego koloru
+  const btn = document.querySelector("#clubConfigView button[onclick*='toggleColorPicker']");
+  if (btn) {
+    const name = (COLOR_NAMES && COLOR_NAMES[color]) ? COLOR_NAMES[color] : "Kolor tła";
+    btn.textContent = name;
+    btn.classList.add("alt");
+  }
+
+  // opcjonalnie: schowaj siatkę po wyborze
+  toggleColorPicker(false);
+}
 
 function pickLogo() {
   const input = document.getElementById("cfgLogoInput");
