@@ -168,7 +168,7 @@
   </style>
 <script>
   // Ustaw globalnie dla Twojego dużego skryptu:
-  window.WERSJA_APKI = '1.04.05.04';
+  window.WERSJA_APKI = '1.04.06.04';
 
   const poprzednia = localStorage.getItem('wersjaApki');
   if (poprzednia !== window.WERSJA_APKI) {
@@ -1279,8 +1279,10 @@ window.addEventListener('load', () => {
   // START aplikacji (router, theme itd.)
   startApp_();
 
-  // splash znika NA KOŃCU, gdy wszystko gotowe
-  if (splash) splash.style.display = 'none';
+  // splash ma być zawsze widoczny minimalnie chwilę (żeby nie "mrugał")
+  if (splash) {
+    setTimeout(() => { splash.style.display = 'none'; }, 700);
+  }
 });
 
 </script>
