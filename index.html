@@ -177,11 +177,11 @@
 
     button, input, select { font-size: 14px; }
   </style>
-  <script> const WERSJA_APKI = '1.02.03.02';
+  <script> const WERSJA_APKI = '1.03.03.02';
     const poprzednia = localStorage.getItem('wersjaApki');
     if (poprzednia !== WERSJA_APKI) {
       localStorage.setItem('wersjaApki', WERSJA_APKI);
-      location.reload(true);
+      location.reload;
         } 
     if ('serviceWorker' in navigator) { 
       navigator.serviceWorker.register('service-worker.js') 
