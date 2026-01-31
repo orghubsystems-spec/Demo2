@@ -179,7 +179,7 @@
   </style>
 <script>
   // Ustaw globalnie dla Twojego dużego skryptu:
-  window.WERSJA_APKI = '1.03.04.03';
+  window.WERSJA_APKI = '1.03.05.03';
 
   const poprzednia = localStorage.getItem('wersjaApki');
   if (poprzednia !== window.WERSJA_APKI) {
@@ -432,6 +432,19 @@ let currentView = "loginView";
 const LS_KEY_CFG = "orghub.clubConfig.v1";
 const LS_KEY_CLUBID = "orghub_clubId";
 const LS_KEY_THEME = "orghub_theme";
+const LS_KEY_CFG_LOCK = "orghub_cfg_locked";
+
+function isCfgLocked_() {
+  return localStorage.getItem(LS_KEY_CFG_LOCK) === "1";
+}
+
+function lockCfg_() {
+  localStorage.setItem(LS_KEY_CFG_LOCK, "1");
+}
+
+function unlockCfg_() {
+  localStorage.removeItem(LS_KEY_CFG_LOCK);
+}
 
 function loadLocalClubConfig() {
   try { return JSON.parse(localStorage.getItem(LS_KEY_CFG) || "null"); }
@@ -499,7 +512,7 @@ function appBack() { history.back(); }
 window.addEventListener("popstate", (event) => {
   const state = event.state;
   if (state && state.view) showViewFromHistory(state.view);
-  else showViewFromHistory(clubId ? "loginView" : "orgHubLandingView");
+  else showViewFromHistory((clubId && isCfgLocked_()) ? "loginView" : "orgHubLandingView");
 });
 
 function refreshClubBadge_() {
@@ -522,8 +535,8 @@ function startApp_() {
   const t = loadTheme_();
   if (t) applyTheme_(t);
 
-  refreshClubBadge_();
-  goToView(clubId ? "loginView" : "orgHubLandingView", { replace: true });
+refreshClubBadge_();
+goToView((clubId && isCfgLocked_()) ? "loginView" : "orgHubLandingView", { replace: true });
 }
 
 /* =================== 50 API (CORE / CLUB) =================== */
@@ -632,6 +645,12 @@ function renderConfigUI_() {
 }
 
 function goToConfig() {
+  // jeśli klub już skonfigurowany i config zablokowany – nie pokazuj panelu
+  if (clubId && isCfgLocked_()) {
+    goToView("loginView");
+    return;
+  }
+
   const saved = loadLocalClubConfig();
   if (saved) cfgDraft = { ...cfgDraft, ...saved };
 
@@ -775,8 +794,11 @@ async function submitClubConfig() {
       return;
     }
 
-    // ustaw clubId
-    saveClubId_(r.clubId);
+// ustaw clubId
+saveClubId_(r.clubId);
+
+// zablokuj panel konfiguracyjny na tym urządzeniu
+lockCfg_();
 
     // theme
     const theme = {
