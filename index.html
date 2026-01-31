@@ -168,7 +168,7 @@
   </style>
 <script>
   // Ustaw globalnie dla Twojego dużego skryptu:
-  window.WERSJA_APKI = '1.04.08.04';
+  window.WERSJA_APKI = '1.05.09.04';
 
   const poprzednia = localStorage.getItem('wersjaApki');
   if (poprzednia !== window.WERSJA_APKI) {
@@ -246,15 +246,31 @@
         </div>
 
         <!-- NAZWA (zgodnie z JS: editClubName) -->
-        <button class="full-btn alt" onclick="editClubName()">Podaj nazwę klubu</button>
+        <button class="full-btn alt" id="btnClubName" onclick="clubNameEditStart()">
+        <span id="clubNameText">Podaj nazwę klubu</span>
+        <input id="clubNameInput" type="text" class="hidden"
+         placeholder="Wpisz nazwę klubu"
+         style="width:100%;box-sizing:border-box;padding:8px;border-radius:6px;border:none;">
+      </button>
+
         <div id="cfgClubNameLabel" style="margin-top:6px;opacity:0.9;"></div>
 
         <!-- SEZON START -->
-        <button class="full-btn alt" onclick="editSeasonStart()">Początek sezonu</button>
+        <button class="full-btn alt" id="btnSeasonStart" onclick="seasonStartPick()">
+        <span id="seasonStartText">Początek sezonu</span>
+        <input id="seasonStartInput" type="date" class="hidden"
+         style="width:100%;box-sizing:border-box;padding:8px;border-radius:6px;border:none;">
+      </button>
+
         <div id="cfgSeasonStartLabel" style="margin-top:6px;opacity:0.9;"></div>
 
         <!-- SEZON END -->
-        <button class="full-btn alt" onclick="editSeasonEnd()">Koniec sezonu</button>
+        <button class="full-btn alt" id="btnSeasonEnd" onclick="seasonEndPick()">
+        <span id="seasonEndText">Koniec sezonu</span>
+        <input id="seasonEndInput" type="date" class="hidden"
+         style="width:100%;box-sizing:border-box;padding:8px;border-radius:6px;border:none;">
+      </button>
+
         <div id="cfgSeasonEndLabel" style="margin-top:6px;opacity:0.9;"></div>
 
         <!-- KOLOR TŁA -->
@@ -266,7 +282,13 @@
         </div>
 
         <!-- EMAIL -->
-        <button class="full-btn alt" onclick="editEmail()">Twój email</button>
+        <button class="full-btn alt" id="btnEmail" onclick="emailEditStart()">
+        <span id="emailText">Twój email</span>
+        <input id="emailInput" type="email" class="hidden"
+         placeholder="Wpisz email"
+         style="width:100%;box-sizing:border-box;padding:8px;border-radius:6px;border:none;">
+        </button>
+
         <div id="cfgEmailLabel" style="margin-top:6px;opacity:0.9;"></div>
 
         <button class="full-btn" style="margin-top:14px;" onclick="submitClubConfig()">Wyślij</button>
@@ -616,7 +638,189 @@ const COLOR_PRESETS = [
   "#2b0b1b", "#6a1b3a"
 ];
 
+ function clubNameEditStart() {
+  const btn = document.getElementById("btnClubName");
+  const span = document.getElementById("clubNameText");
+  const input = document.getElementById("clubNameInput");
+  if (!btn || !span || !input) return;
 
+  // pokaż input w klawiszu
+  span.classList.add("hidden");
+  input.classList.remove("hidden");
+  input.value = cfgDraft.clubName || "";
+  input.focus();
+  input.select();
+
+  // podpinamy handlery tylko raz
+  if (input.dataset.bound === "1") return;
+  input.dataset.bound = "1";
+
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      clubNameEditCommit();
+    }
+    if (e.key === "Escape") {
+      e.preventDefault();
+      clubNameEditCancel();
+    }
+  });
+
+  input.addEventListener("blur", () => {
+    clubNameEditCommit();
+  });
+}
+
+function clubNameEditCommit() {
+  const span = document.getElementById("clubNameText");
+  const input = document.getElementById("clubNameInput");
+  if (!span || !input) return;
+
+  const v = String(input.value || "").trim();
+  cfgDraft.clubName = v;
+
+  // wróć do trybu "klawisz"
+  input.classList.add("hidden");
+  span.classList.remove("hidden");
+
+  // tekst w klawiszu
+  span.textContent = v ? v : "Podaj nazwę klubu";
+}
+
+function clubNameEditCancel() {
+  const span = document.getElementById("clubNameText");
+  const input = document.getElementById("clubNameInput");
+  if (!span || !input) return;
+
+  input.classList.add("hidden");
+  span.classList.remove("hidden");
+  span.textContent = cfgDraft.clubName ? cfgDraft.clubName : "Podaj nazwę klubu";
+}
+
+function seasonStartPick() {
+  const span = document.getElementById("seasonStartText");
+  const input = document.getElementById("seasonStartInput");
+  if (!span || !input) return;
+
+  // pokaż input (kalendarz) w klawiszu
+  span.classList.add("hidden");
+  input.classList.remove("hidden");
+
+  // ustaw aktualną wartość jeśli jest
+  input.value = cfgDraft.sezonStart ? String(cfgDraft.sezonStart).slice(0, 10) : "";
+
+  // otwórz picker (jeśli przeglądarka pozwala)
+  try { input.showPicker && input.showPicker(); } catch (e) {}
+
+  if (input.dataset.bound === "1") return;
+  input.dataset.bound = "1";
+
+  input.addEventListener("change", () => {
+    const v = String(input.value || "").trim(); // YYYY-MM-DD
+    cfgDraft.sezonStart = v; // trzymamy pełną datę
+
+    // wróć do klawisza z datą
+    input.classList.add("hidden");
+    span.classList.remove("hidden");
+    span.textContent = v ? v : "Początek sezonu";
+  });
+
+  input.addEventListener("blur", () => {
+    // jak user wyjdzie bez wyboru, wróć do trybu klawisza
+    input.classList.add("hidden");
+    span.classList.remove("hidden");
+    span.textContent = cfgDraft.sezonStart ? cfgDraft.sezonStart : "Początek sezonu";
+  });
+}
+
+  function seasonEndPick() {
+  const span = document.getElementById("seasonEndText");
+  const input = document.getElementById("seasonEndInput");
+  if (!span || !input) return;
+
+  // pokaż input (kalendarz) w klawiszu
+  span.classList.add("hidden");
+  input.classList.remove("hidden");
+
+  // ustaw aktualną wartość jeśli jest
+  input.value = cfgDraft.sezonEnd ? String(cfgDraft.sezonEnd).slice(0, 10) : "";
+
+  // otwórz picker (jeśli przeglądarka pozwala)
+  try { input.showPicker && input.showPicker(); } catch (e) {}
+
+  if (input.dataset.bound === "1") return;
+  input.dataset.bound = "1";
+
+  input.addEventListener("change", () => {
+    const v = String(input.value || "").trim(); // YYYY-MM-DD
+    cfgDraft.sezonEnd = v;
+
+    // wróć do klawisza z datą
+    input.classList.add("hidden");
+    span.classList.remove("hidden");
+    span.textContent = v ? v : "Koniec sezonu";
+  });
+
+  input.addEventListener("blur", () => {
+    input.classList.add("hidden");
+    span.classList.remove("hidden");
+    span.textContent = cfgDraft.sezonEnd ? cfgDraft.sezonEnd : "Koniec sezonu";
+  });
+}
+
+function emailEditStart() {
+  const span = document.getElementById("emailText");
+  const input = document.getElementById("emailInput");
+  if (!span || !input) return;
+
+  span.classList.add("hidden");
+  input.classList.remove("hidden");
+  input.value = cfgDraft.email || "";
+  input.focus();
+  input.select();
+
+  if (input.dataset.bound === "1") return;
+  input.dataset.bound = "1";
+
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      emailEditCommit();
+    }
+    if (e.key === "Escape") {
+      e.preventDefault();
+      emailEditCancel();
+    }
+  });
+
+  input.addEventListener("blur", () => {
+    emailEditCommit();
+  });
+}
+
+function emailEditCommit() {
+  const span = document.getElementById("emailText");
+  const input = document.getElementById("emailInput");
+  if (!span || !input) return;
+
+  const v = String(input.value || "").trim();
+  cfgDraft.email = v;
+
+  input.classList.add("hidden");
+  span.classList.remove("hidden");
+  span.textContent = v ? v : "Twój email";
+}
+
+function emailEditCancel() {
+  const span = document.getElementById("emailText");
+  const input = document.getElementById("emailInput");
+  if (!span || !input) return;
+
+  input.classList.add("hidden");
+  span.classList.remove("hidden");
+  span.textContent = cfgDraft.email ? cfgDraft.email : "Twój email";
+}
+  
 function renderConfigUI_() {
   const nameEl = document.getElementById("cfgClubNameLabel");
   const ssEl = document.getElementById("cfgSeasonStartLabel");
