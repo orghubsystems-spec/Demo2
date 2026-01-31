@@ -168,7 +168,7 @@
   </style>
 <script>
   // Ustaw globalnie dla Twojego dużego skryptu:
-  window.WERSJA_APKI = '1.04.07.04';
+  window.WERSJA_APKI = '1.04.08.04';
 
   const poprzednia = localStorage.getItem('wersjaApki');
   if (poprzednia !== window.WERSJA_APKI) {
@@ -618,13 +618,22 @@ const COLOR_PRESETS = [
 
 
 function renderConfigUI_() {
-if (nameEl) nameEl.textContent = "";
-if (ssEl) ssEl.textContent = "";
-if (seEl) seEl.textContent = "";
-if (emEl) emEl.textContent = "";
-if (colEl) colEl.textContent = "";
+  const nameEl = document.getElementById("cfgClubNameLabel");
+  const ssEl = document.getElementById("cfgSeasonStartLabel");
+  const seEl = document.getElementById("cfgSeasonEndLabel");
+  const emEl = document.getElementById("cfgEmailLabel");
+  const colEl = document.getElementById("cfgColorLabel");
+  const prev = document.getElementById("cfgLogoPreview");
+  const grid = document.getElementById("cfgColorGrid");
 
+  // POD PRZYCISKAMI ZAWSZE PUSTO
+  if (nameEl) nameEl.textContent = "";
+  if (ssEl) ssEl.textContent = "";
+  if (seEl) seEl.textContent = "";
+  if (emEl) emEl.textContent = "";
+  if (colEl) colEl.textContent = "";
 
+  // LOGO – bez zmian
   if (prev) {
     if (cfgDraft.logoDataUrl) {
       prev.src = cfgDraft.logoDataUrl;
@@ -634,11 +643,16 @@ if (colEl) colEl.textContent = "";
     }
   }
 
+  // SIATKA KOLORÓW – bez opisu tekstowego
   if (grid) {
     grid.innerHTML = COLOR_PRESETS.map(c => `
       <div onclick="setBgColor('${c}')" style="
-        width:100%; aspect-ratio:1/1; border-radius:10px;
-        border:1px solid #444; background:${c}; cursor:pointer;">
+        width:100%;
+        aspect-ratio:1/1;
+        border-radius:10px;
+        border:1px solid #444;
+        background:${c};
+        cursor:pointer;">
       </div>
     `).join("");
   }
@@ -672,9 +686,12 @@ function toggleColorPicker(show) {
 function setBgColor(color) {
   cfgDraft.bgColor = color;
   document.body.style.backgroundColor = color;
+
+  // Pod przyciskiem ma być zawsze pusto
   const colEl = document.getElementById("cfgColorLabel");
-  if (colEl) colEl.textContent = `✅ ${color}`;
+  if (colEl) colEl.textContent = "";
 }
+
 
 function pickLogo() {
   const input = document.getElementById("cfgLogoInput");
