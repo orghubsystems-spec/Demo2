@@ -179,7 +179,7 @@
   </style>
 <script>
   // Ustaw globalnie dla Twojego dużego skryptu:
-  window.WERSJA_APKI = '1.03.03.03';
+  window.WERSJA_APKI = '1.03.04.03';
 
   const poprzednia = localStorage.getItem('wersjaApki');
   if (poprzednia !== window.WERSJA_APKI) {
@@ -571,11 +571,31 @@ let cfgDraft = {
 
 // paleta (więcej kolorów zrobimy w następnym kroku)
 const COLOR_PRESETS = [
-  "#000000","#111111","#1b1b1b","#2a2a2a",
-  "#0b1220","#0f1a2b","#132235","#1a2f4a",
-  "#1a0f1f","#2a1232","#3a1444","#4a1757",
-  "#102015","#15301f","#1a4028","#205232",
+  // Czarne / szarości (2 odcienie)
+  "#000000", "#1a1a1a",
+
+  // Granat (2)
+  "#0b1b2b", "#123a5a",
+
+  // Niebieski (2)
+  "#0b2b5a", "#1a4fa3",
+
+  // Turkus (2)
+  "#0b2b2b", "#118a8a",
+
+  // Zieleń (2)
+  "#0b2b1b", "#1f7a3a",
+
+  // Oliwka (2)
+  "#2b2b0b", "#7a7a1f",
+
+  // Pomarańcz/brąz (2)
+  "#2b1b0b", "#a35a1a",
+
+  // Bordo/fiolet (2)
+  "#2b0b1b", "#6a1b3a"
 ];
+
 
 function renderConfigUI_() {
   const nameEl = document.getElementById("cfgClubNameLabel");
