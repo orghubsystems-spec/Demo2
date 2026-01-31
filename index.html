@@ -86,27 +86,16 @@
       transition: background 0.2s ease, opacity 0.2s ease;
     }
 
-    /* Splash */
-    #splash {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-      background: #000;
-    }
-    .logo-fadein {
-      width: 300px;
-      opacity: 0;
-      filter: brightness(20%) blur(2px);
-      transform: scale(0.2);
-      animation: wjazdLogo 5s ease-out forwards;
-    }
-    @keyframes wjazdLogo {
-      0%   { opacity: 0; transform: scale(0.2); filter: brightness(20%) blur(4px); }
-      60%  { opacity: 1; transform: scale(1.1); filter: brightness(160%) blur(0); }
-      85%  { opacity: 1; transform: scale(1);   filter: brightness(100%); }
-      100% { opacity: 0; transform: scale(1);   filter: brightness(50%) blur(2px); }
-    }
+/* Splash (statyczny) */
+#splash {
+  position: fixed;
+  inset: 0;
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 4000;
+}
 
     .select-like-input {
       width: 200px;
@@ -179,7 +168,7 @@
   </style>
 <script>
   // Ustaw globalnie dla Twojego dużego skryptu:
-  window.WERSJA_APKI = '1.03.05.03';
+  window.WERSJA_APKI = '1.04.05.03';
 
   const poprzednia = localStorage.getItem('wersjaApki');
   if (poprzednia !== window.WERSJA_APKI) {
@@ -209,9 +198,35 @@
   </div>
 
   <!-- Splash -->
-  <div id="splash">
-    <img src="icon-512.png" class="logo-fadein" alt="Logo">
+<div id="splash" style="
+  position:fixed;
+  inset:0;
+  background:#ffffff;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  z-index:4000;
+">
+  <div style="text-align:center;">
+    <div style="
+      font-size:48px;
+      font-weight:700;
+      letter-spacing:2px;
+      color:#000;
+      margin-bottom:12px;
+    ">
+      ORG HUB
+    </div>
+    <div style="
+      font-size:22px;
+      letter-spacing:4px;
+      color:#000;
+      opacity:0.8;
+    ">
+      SYSTEMS
+    </div>
   </div>
+</div>
 
   <!-- Główna aplikacja -->
   <div id="app" class="hidden">
