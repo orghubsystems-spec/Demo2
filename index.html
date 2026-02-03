@@ -168,7 +168,7 @@
   </style>
 <script>
   // Ustaw globalnie dla Twojego dużego skryptu:
-  window.WERSJA_APKI = '1.05.10.04 test';
+  window.WERSJA_APKI = '1.05.10.04';
 
   const poprzednia = localStorage.getItem('wersjaApki');
   if (poprzednia !== window.WERSJA_APKI) {
@@ -176,7 +176,7 @@
     location.reload(); // bez (true) — to już jest przestarzałe
   }
 
-  if (false && 'serviceWorker' in navigator) {
+  if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('service-worker.js')
       .then(r => console.log("✅ SW zarejestrowany:", r))
       .catch(e => console.error("❌ Błąd SW:", e));
